@@ -8,9 +8,7 @@ class ProblemService {
 
     async createProblem(problemData) {
         problemData.description = sanitizeMarkdownContent(problemData.description);
-
         const problem = await this.problemRepository.createProblem(problemData);
-
         return problem;
     }
 

@@ -3,67 +3,86 @@ const mongoose = require('mongoose');
 const problemSchema = new mongoose.Schema({
     title: {
         type: String,
-        required: [true, 'Title cannot be empty']
+        required: [true, 'Title cannot be empty'],
+        trim: true,
+        minlength: [3, 'Title must be at least 3 characters long']
     },
     description: {
         type: String,
-        required: [true, 'Description cannot be empty']
+        required: [true, 'Description cannot be empty'],
+        trim: true
     },
     difficulty: {
         type: String,
-        enum: ['easy', 'medium', 'hard'],
+        enum: {
+            values: ['easy', 'medium', 'hard'],
+            message: 'Difficulty must be easy, medium, or hard'
+        },
         required: [true, 'Difficulty cannot be empty'],
-        default: 'easy'
+        default: 'easy',
+        lowercase: true
     },
-    testCases: [
-        {
+    testCases: {
+        type: [{
             input: {
                 type: String,
-                required: true
+                required: [true, 'Test case input is required'],
+                trim: true
             },
             output: {
                 type: String,
-                required: true
+                required: [true, 'Test case output is required'],
+                trim: true
             }
+        }],
+        validate: {
+            validator: function(arr) {
+                return arr && arr.length > 0;
+            },
+            message: 'At least one test case is required'
         }
-    ],
-    codeStubs : [
-       {
-        language: {
-            type: String,
-            required: true
-        },
-        startSnippet: {
-            type: String,
-            required: true
-        },
-        userSnippet :{
-            type: String,
-        },
-        endSnippet: {
-            type: String,
-            required: true
+    },
+    codeStubs: {
+        type: [{
+            language: {
+                type: String,
+                required: [true, 'Language is required'],
+                trim: true,
+                lowercase: true
+            },
+            startSnippet: {
+                type: String,
+                required: [true, 'Start snippet is required'],
+                trim: true
+            },
+            userSnippet: {
+                type: String,
+                default: '',
+                trim: true
+            },
+            endSnippet: {
+                type: String,
+                required: [true, 'End snippet is required'],
+                trim: true
+            }
+        }],
+        validate: {
+            validator: function(arr) {
+                return arr && arr.length > 0;
+            },
+            message: 'At least one code stub is required'
         }
-       } 
-    ],
+    },
     editorial: {
-        type: String
+        type: String,
+        default: '',
+        trim: true
     }
+}, {
+    timestamps: true,
+    strict: true
 });
 
 const Problem = mongoose.model('Problem', problemSchema);
 
 module.exports = Problem;
-
-/**
- * 
- * [{input: '5', output: '10'}, {input: '2', output: '20'}]
- * 
- * 
- * 5 
- * 2 3 4 5 6
- * 8
- * 
- * 1 3
- * 
- */
