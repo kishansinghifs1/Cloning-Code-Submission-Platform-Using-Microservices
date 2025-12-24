@@ -24,12 +24,17 @@ export default class SubmissionJob implements IJob {
       const key = Object.keys(this.payload)[0];
       const submissionData: SubmissionPayload = this.payload[key];
 
+      if (!submissionData) {
+        throw new Error("Invalid payload: submission data not found");
+      }
+
       const codeLanguage = submissionData.language;
       const code = submissionData.code;
       const testCases = submissionData.testCases;
       const submissionId = submissionData.submissionId;
       const userId = submissionData.userId;
 
+      // Create executor ONCE per submission - image will be pulled once
       const strategy = createExecutor(codeLanguage);
 
       if (strategy != null) {
@@ -37,6 +42,7 @@ export default class SubmissionJob implements IJob {
         let passedCount = 0;
         const startTime = Date.now();
 
+        // Run all test cases with the same executor instance
         for (let i = 0; i < testCases.length; i++) {
           const testCase = testCases[i];
           try {
@@ -85,13 +91,13 @@ export default class SubmissionJob implements IJob {
             passedCount === testCases.length
               ? "SUCCESS"
               : passedCount > 0
-              ? "PARTIAL"
-              : "FAILED",
+                ? "PARTIAL"
+                : "FAILED",
           testResults,
           executionTime,
         };
 
-        console.log("📊 Evaluation complete:", evaluationResult);
+        console.log("Evaluation complete:", evaluationResult);
 
         // Send results back to Submission-Service via webhook
         await this.sendWebhookCallback(evaluationResult);
@@ -105,30 +111,30 @@ export default class SubmissionJob implements IJob {
 
   private sendWebhookCallback = async (evaluationResult: EvaluationResult) => {
     try {
-      const webhookUrl = process.env.SUBMISSION_SERVICE_WEBHOOK_URL || 
+      const webhookUrl = process.env.SUBMISSION_SERVICE_WEBHOOK_URL ||
         `http://localhost:5000/api/v1/submissions/${evaluationResult.submissionId}/evaluate-result`;
 
       console.log(`🔄 Sending webhook callback to: ${webhookUrl}`);
 
       const response = await axios.post(webhookUrl, evaluationResult, {
-        timeout: 5000 // 5 second timeout
+        timeout: 5000
       });
 
       console.log(`✅ Webhook callback sent successfully. Response status: ${response.status}`);
       return response.data;
     } catch (error) {
       console.error(
-        `❌ Failed to send webhook callback:`,
+        `Failed to send webhook callback`,
         error instanceof Error ? error.message : error
       );
     }
   };
 
   failed = (job?: Job): void => {
-    console.log("Job failed");
+    console.error("Job failed");
     if (job) {
-      console.log("Job ID:", job.id);
-      console.log("Error:", job.failedReason);
+      console.error("Job ID:", job.id);
+      console.error("Error:", job.failedReason);
     }
   };
 }

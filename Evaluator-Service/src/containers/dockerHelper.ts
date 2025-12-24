@@ -1,3 +1,5 @@
+import { Readable } from "stream";
+
 import { DockerStreamOutput } from "../types/types";
 import { DOCKER_STREAM_HEADER_SIZE } from "../utils/constants";
 
@@ -34,20 +36,43 @@ export function decodeDockerStream(buffer: Buffer): DockerStreamOutput {
     return output;
 }
 
-export function fetchDecodedStream(loggerStream: NodeJS.ReadableStream, rawLogBuffer: Buffer[]): Promise<string> {
+export function fetchDecodedStream(loggerStream: NodeJS.ReadableStream, rawLogBuffer: Buffer[], timeoutMs: number = 5000): Promise<string> {
     return new Promise((res, rej) => {
+        let isResolved = false;
+
         const timeout = setTimeout(() => {
-            console.log("Timeout called");
-            rej("TLE");
-        }, 2000);
-        loggerStream.on('end', () => {
+            if (!isResolved) {
+                isResolved = true;
+                console.log("Timeout called - TLE");
+                (loggerStream as Readable).destroy();
+                rej("TLE");
+            }
+        }, timeoutMs);
+
+        const cleanup = () => {
             clearTimeout(timeout);
-            const completeBuffer = Buffer.concat(rawLogBuffer as unknown as Uint8Array[]);
-            const decodedStream = decodeDockerStream(completeBuffer);
-            if (decodedStream.stderr) {
-                rej(decodedStream.stderr);
-            } else {
-                res(decodedStream.stdout);
+            loggerStream.removeAllListeners();
+        };
+
+        loggerStream.on('end', () => {
+            if (!isResolved) {
+                isResolved = true;
+                cleanup();
+                const completeBuffer = Buffer.concat(rawLogBuffer as unknown as Uint8Array[]);
+                const decodedStream = decodeDockerStream(completeBuffer);
+                if (decodedStream.stderr) {
+                    rej(decodedStream.stderr);
+                } else {
+                    res(decodedStream.stdout);
+                }
+            }
+        });
+
+        loggerStream.on('error', (error) => {
+            if (!isResolved) {
+                isResolved = true;
+                cleanup();
+                rej(error);
             }
         });
     })
