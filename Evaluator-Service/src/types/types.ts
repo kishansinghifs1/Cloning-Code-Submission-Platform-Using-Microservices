@@ -51,8 +51,9 @@ export type EvaluationResult = {
     passedTestCases: number,
     failedTestCases: number,
     overallStatus: 'SUCCESS' | 'PARTIAL' | 'FAILED',
-    testResults: TestResult[]
-}
+    testResults: TestResult[],
+    executionTime?: number // milliseconds
+};
 
 export type TestCase = {
     input: string,

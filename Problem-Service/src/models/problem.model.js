@@ -39,7 +39,6 @@ const problemSchema = new mongoose.Schema({
         },
         userSnippet :{
             type: String,
-            required:true
         },
         endSnippet: {
             type: String,

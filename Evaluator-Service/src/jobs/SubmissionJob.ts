@@ -1,3 +1,4 @@
+import axios from "axios";
 import { Job } from "bullmq";
 
 import { IJob } from "../types/types";
@@ -34,6 +35,8 @@ export default class SubmissionJob implements IJob {
       if (strategy != null) {
         const testResults: TestResult[] = [];
         let passedCount = 0;
+        const startTime = Date.now();
+
         for (let i = 0; i < testCases.length; i++) {
           const testCase = testCases[i];
           try {
@@ -70,7 +73,8 @@ export default class SubmissionJob implements IJob {
           }
         }
 
-        
+        const executionTime = Date.now() - startTime;
+
         const evaluationResult: EvaluationResult = {
           submissionId,
           userId,
@@ -84,16 +88,39 @@ export default class SubmissionJob implements IJob {
               ? "PARTIAL"
               : "FAILED",
           testResults,
+          executionTime,
         };
 
-        console.log("Evaluation complete:", evaluationResult);
+        console.log("📊 Evaluation complete:", evaluationResult);
 
-        // TODO: Send results back to Submission-Service via webhook or Redis
-        // For now, just return the result (can be accessed via job.returnvalue)
+        // Send results back to Submission-Service via webhook
+        await this.sendWebhookCallback(evaluationResult);
+
         return evaluationResult;
       } else {
         throw new Error(`No executor found for language: ${codeLanguage}`);
       }
+    }
+  };
+
+  private sendWebhookCallback = async (evaluationResult: EvaluationResult) => {
+    try {
+      const webhookUrl = process.env.SUBMISSION_SERVICE_WEBHOOK_URL || 
+        `http://localhost:5000/api/v1/submissions/${evaluationResult.submissionId}/evaluate-result`;
+
+      console.log(`🔄 Sending webhook callback to: ${webhookUrl}`);
+
+      const response = await axios.post(webhookUrl, evaluationResult, {
+        timeout: 5000 // 5 second timeout
+      });
+
+      console.log(`✅ Webhook callback sent successfully. Response status: ${response.status}`);
+      return response.data;
+    } catch (error) {
+      console.error(
+        `❌ Failed to send webhook callback:`,
+        error instanceof Error ? error.message : error
+      );
     }
   };
 

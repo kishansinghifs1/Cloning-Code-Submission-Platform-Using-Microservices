@@ -2,6 +2,29 @@ import express, { Response } from "express";
 
 import bullBoardAdapter from "./config/bullBoardConfig";
 import serverConfig from "./config/serverConfig";
+import SubmissionWorker from "./workers/SubmissionWorker";
+
+const app = express();
+
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+app.get("/ping", (res: Response): void => {
+  res.status(200).send("Pong");
+});
+
+app.use("/ui", bullBoardAdapter.getRouter());
+
+// Start the submission queue worker
+SubmissionWorker('SubmissionQueue');
+
+app.listen(serverConfig.PORT, () => {
+  console.log(`🚀 Evaluator Service is up on port ${serverConfig.PORT}`);
+  console.log(`📊 BullMQ UI available at http://localhost:${serverConfig.PORT}/ui`);
+  console.log(`⏳ Waiting for jobs from SubmissionQueue...`);
+});
+
+
 
 // import submissionQueueProducer from "./producers/submissionQueueProducer";
 // import { submission_queue } from "./utils/constants";
@@ -45,19 +68,5 @@ import serverConfig from "./config/serverConfig";
 //   },
 // };
 
-const app = express();
-
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-app.get("/ping", (res: Response): void => {
-  res.status(200).send("Pong");
-});
-
-app.use("/ui", bullBoardAdapter.getRouter());
-
-app.listen(serverConfig.PORT, () => {
-  console.log(`Server is up`);
-  // SubmissionWorker(submission_queue);
-  // submissionQueueProducer(dummyPayload);
-});
+// SubmissionWorker(submission_queue);
+// submissionQueueProducer(dummyPayload);

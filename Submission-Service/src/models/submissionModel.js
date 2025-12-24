@@ -2,14 +2,14 @@ const mongoose = require('mongoose');
 
 const submissionSchema = new mongoose.Schema({
     userId: {
-        unique: true,
         type: String,
         required: [true, "User id for the submission is missing"],
+        index: true // For querying user submissions efficiently
     },
     problemId: {
-        unique : true,
         type: String,
         required: [true, "Problem id for the submission is missing"],
+        index: true
     },
     code: {
         type: String,
@@ -21,10 +21,50 @@ const submissionSchema = new mongoose.Schema({
     },
     status: {
         type: String,
-        enum: ["Pending", "Success", "RE", "TLE", "MLE", "WA"],
-        default: "Pending"
-    }
-});
+        enum: ["PENDING", "PROCESSING", "COMPLETED", "ERROR"],
+        default: "PENDING"
+    },
+    
+    // Evaluation Results
+    testResults: [{
+        testCaseIndex: Number,
+        input: String,
+        expectedOutput: String,
+        actualOutput: String,
+        status: {
+            type: String,
+            enum: ["PASS", "FAIL"],
+            default: "FAIL"
+        },
+        error: String
+    }],
+    totalTestCases: {
+        type: Number,
+        default: 0
+    },
+    passedTestCases: {
+        type: Number,
+        default: 0
+    },
+    failedTestCases: {
+        type: Number,
+        default: 0
+    },
+    overallStatus: {
+        type: String,
+        enum: ["SUCCESS", "PARTIAL", "FAILED", null],
+        default: null
+    },
+    executionError: String,
+    
+    // Metadata
+    submittedAt: {
+        type: Date,
+        default: Date.now
+    },
+    completedAt: Date,
+    executionTime: Number // milliseconds
+}, { timestamps: true });
 
 const Submission = mongoose.model('Submission', submissionSchema);
 module.exports = Submission;
