@@ -52,7 +52,6 @@ const problemSchema = new mongoose.Schema({
             },
             startSnippet: {
                 type: String,
-                required: [true, 'Start snippet is required'],
                 trim: true
             },
             userSnippet: {
@@ -62,7 +61,6 @@ const problemSchema = new mongoose.Schema({
             },
             endSnippet: {
                 type: String,
-                required: [true, 'End snippet is required'],
                 trim: true
             }
         }],

@@ -11,8 +11,8 @@ const createProblemSchema = z.object({
     codeStubs: z.array(z.object({
         language: z.string().trim().toLowerCase(),
         startSnippet: z.string().trim(),
-        userSnippet: z.string().trim().optional(),
-        endSnippet: z.string().trim()
+        userSnippet: z.string().trim(),
+        endSnippet: z.string().trim().optional()
     })).min(1),
     editorial: z.string().trim().optional()
 });
