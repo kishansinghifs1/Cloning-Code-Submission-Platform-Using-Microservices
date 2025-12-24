@@ -19,14 +19,29 @@ app.use('/api', apiRouter);
 
 
 app.get('/ping', (req, res) => {
-    return res.json({message: 'Problem Service is alive'});
+    return res.json({ message: 'Problem Service is alive' });
 });
 
 //global catches for the error handler 
 app.use(errorHandler);
 
+
 app.listen(PORT, async () => {
     console.log(`Server started at PORT: ${PORT}`);
-    await connectToDB();
-    console.log("Successfully connected to db");
+    try {
+        await connectToDB.connect();
+    } catch (error) {
+        console.log("DB Connection failed", error);
+    }
 });
+
+// Graceful Shutdown
+async function shutdown(signal) {
+    console.log(`Received ${signal}. Shutting down gracefully...`);
+    await connectToDB.disconnect();
+    console.log('Server shutdown complete');
+    process.exit(0);
+}
+
+process.on('SIGINT', () => shutdown('SIGINT'));
+process.on('SIGTERM', () => shutdown('SIGTERM'));

@@ -18,7 +18,7 @@ class ProblemRepository {
 
             return problem;
         } catch (error) {
-            console.log(error);
+            logger.error(error);
             throw error;
         }
     }
@@ -28,7 +28,7 @@ class ProblemRepository {
             const problems = await Problem.find({});
             return problems;
         } catch (error) {
-            console.log(error);
+            logger.error(error);
             throw error;
         }
     }
@@ -41,7 +41,7 @@ class ProblemRepository {
             }
             return problem;
         } catch (error) {
-            console.log(error);
+            logger.error(error);
             throw error;
         }
     }
@@ -55,7 +55,7 @@ class ProblemRepository {
             }
             return deletedProblem;
         } catch (error) {
-            console.log(error);
+            logger.error(error);
             throw error;
         }
     }
@@ -69,7 +69,7 @@ class ProblemRepository {
             }
             return updatedProblem;
         } catch (error) {
-            console.log(error);
+            logger.error(error);
             throw error;
         }
     }
