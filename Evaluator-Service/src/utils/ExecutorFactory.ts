@@ -1,6 +1,6 @@
+import CppExecutor from "../containers/cppExecutor";
 import JavaExecutor from "../containers/javaExecutor";
 import PythonExecutor from "../containers/pythonExecutor";
-import runCPP from "../containers/runCpp";
 import { CodeExecutorStrategy } from "../types/types";
 
 export default function createExecutor(codeLanguage: string): CodeExecutorStrategy | null {
@@ -8,9 +8,9 @@ export default function createExecutor(codeLanguage: string): CodeExecutorStrate
         return new PythonExecutor();
     } else if (codeLanguage.toLowerCase() === "java") {
         return new JavaExecutor();
-    } else if (codeLanguage.toLowerCase() ==="cpp") {
-        return new runCPP();
-    }else {
+    } else if (codeLanguage.toLowerCase() === "cpp") {
+        return new CppExecutor();
+    } else {
         return null;
     }
 }

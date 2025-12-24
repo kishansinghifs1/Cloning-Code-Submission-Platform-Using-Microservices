@@ -29,8 +29,29 @@ export interface DockerStreamOutput {
 export type SubmissionPayload = {
     code: string,
     language: string,
-    inputCase: string,
-    outputCase: string
+    testCases: TestCase[],
+    userId: string,
+    submissionId: string,
+    problemId?: string
+};
+
+export type TestResult = {
+    testCaseIndex: number,
+    input: string,
+    expectedOutput: string,
+    actualOutput: string,
+    status: 'PASS' | 'FAIL',
+    error?: string
+};
+
+export type EvaluationResult = {
+    submissionId: string,
+    userId: string,
+    totalTestCases: number,
+    passedTestCases: number,
+    failedTestCases: number,
+    overallStatus: 'SUCCESS' | 'PARTIAL' | 'FAILED',
+    testResults: TestResult[]
 }
 
 export type TestCase = {

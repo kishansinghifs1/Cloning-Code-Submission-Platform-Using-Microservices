@@ -24,7 +24,6 @@ export default async function pullImage(imageName: string) {
             });
         });
     } catch (error) {
-        console.error(`Error pulling image ${imageName}:`, error);
         throw error;
     }
 }

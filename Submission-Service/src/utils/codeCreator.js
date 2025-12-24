@@ -5,12 +5,10 @@
  * @param endSnippet - The ending code (closing braces, test execution, etc.)
  * @returns Complete code ready for execution
  */
-export default function codeCreator(
-    startSnippet: string,
-    userCode: string,
-    endSnippet: string
-): string {
-    return `${startSnippet}
+function codeCreator(startSnippet, userCode, endSnippet) {
+  return `${startSnippet}
 ${userCode}
 ${endSnippet}`;
 }
+
+module.exports = codeCreator;
