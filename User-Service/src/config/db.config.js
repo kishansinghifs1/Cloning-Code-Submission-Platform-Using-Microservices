@@ -15,7 +15,6 @@ class DBConnection {
             console.log('DB Connection: Using existing connection');
             return;
         }
-
         try {
             if (NODE_ENV == "development") {
                 await mongoose.connect(ATLAS_DB_URL);
