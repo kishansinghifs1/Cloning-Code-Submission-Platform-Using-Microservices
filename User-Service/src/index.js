@@ -5,13 +5,21 @@ const { PORT } = require('./config/server.config');
 const apiRouter = require('./routes');
 const errorHandler = require('./utils/errorHandler');
 const connectToDB = require('./config/db.config');
-
+const cors = require('cors');
 const app = express();
 
 // Middleware
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.text());
+
+
+app.use(cors({
+    origin: ["http://localhost:5173"],
+    methods: ['GET', 'PUT', 'POST', 'DELETE'], // Specify allowed HTTP methods
+    allowedHeaders: ['Content-Type', 'Authorization'], // Specify allowed headers
+}));
+
 
 // All requests that start with /api will be mapped to apiRouter
 app.use('/api', apiRouter);
