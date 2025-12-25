@@ -34,15 +34,12 @@ export default class SubmissionJob implements IJob {
       const submissionId = submissionData.submissionId;
       const userId = submissionData.userId;
 
-      // Create executor ONCE per submission - image will be pulled once
       const strategy = createExecutor(codeLanguage);
 
       if (strategy != null) {
         const testResults: TestResult[] = [];
         let passedCount = 0;
         const startTime = Date.now();
-
-        // Run all test cases with the same executor instance
         for (let i = 0; i < testCases.length; i++) {
           const testCase = testCases[i];
           try {
@@ -97,9 +94,6 @@ export default class SubmissionJob implements IJob {
           executionTime,
         };
 
-        console.log("Evaluation complete:", evaluationResult);
-
-        // Send results back to Submission-Service via webhook
         await this.sendWebhookCallback(evaluationResult);
 
         return evaluationResult;
@@ -114,13 +108,13 @@ export default class SubmissionJob implements IJob {
       const webhookUrl = process.env.SUBMISSION_SERVICE_WEBHOOK_URL ||
         `http://localhost:5000/api/v1/submissions/${evaluationResult.submissionId}/evaluate-result`;
 
-      console.log(`🔄 Sending webhook callback to: ${webhookUrl}`);
+      console.log(`Sending webhook callback to: ${webhookUrl}`);
 
       const response = await axios.post(webhookUrl, evaluationResult, {
         timeout: 5000
       });
 
-      console.log(`✅ Webhook callback sent successfully. Response status: ${response.status}`);
+      console.log(`Webhook callback sent successfully`);
       return response.data;
     } catch (error) {
       console.error(

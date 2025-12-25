@@ -4,7 +4,7 @@ const submissionSchema = new mongoose.Schema({
     userId: {
         type: String,
         required: [true, "User id for the submission is missing"],
-        index: true // For querying user submissions efficiently
+        index: true
     },
     problemId: {
         type: String,
@@ -24,8 +24,7 @@ const submissionSchema = new mongoose.Schema({
         enum: ["PENDING", "PROCESSING", "COMPLETED", "ERROR"],
         default: "PENDING"
     },
-    
-    // Evaluation Results
+
     testResults: [{
         testCaseIndex: Number,
         input: String,
@@ -56,15 +55,42 @@ const submissionSchema = new mongoose.Schema({
         default: null
     },
     executionError: String,
-    
-    // Metadata
     submittedAt: {
         type: Date,
-        default: Date.now
+        default: Date.now,
+        index: true
     },
     completedAt: Date,
-    executionTime: Number // milliseconds
-}, { timestamps: true });
+    executionTime: Number,
+    
+    // Idempotency & Retry Fields
+    idempotencyKey: {
+        type: String,
+        unique: true,
+        sparse: true
+    },
+    webhookAttempts: {
+        type: Number,
+        default: 0
+    },
+    lastWebhookAttempt: Date,
+    nextRetryAt: Date,
+    webhookFailed: {
+        type: Boolean,
+        default: false
+    },
+    
+    // Indexes for common queries
+    __v: { type: Number, select: false }
+}, { 
+    timestamps: true,
+    indexes: [
+        { userId: 1, submittedAt: -1 },
+        { problemId: 1, userId: 1 },
+        { status: 1, submittedAt: -1 },
+        { webhookFailed: 1, nextRetryAt: 1 }
+    ]
+});
 
 const Submission = mongoose.model('Submission', submissionSchema);
 module.exports = Submission;

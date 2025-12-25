@@ -1,85 +1,115 @@
-// TODO: Add validation layer
+const ApiResponse = require('../utils/apiResponse');
+const Logger = require('../utils/logger');
+const {
+    submissionValidationSchema,
+    getSubmissionSchema,
+    getUserSubmissionsSchema,
+    evaluationResultSchema
+} = require('../validators/submissionValidator');
+
+const logger = new Logger('SubmissionController');
 
 async function createSubmission(req, res) {
-    const response = await this.submissionService.addSubmission(req.body);
-    return res.status(201).send({
-        error: {},
-        data: response,
-        success: true,
-        message: 'Created submission successfully'
-    })
+    try {
+        const { error, value } = submissionValidationSchema.validate(req.body);
+
+        if (error) {
+            logger.warn('Validation failed for create submission', { error: error.details });
+            return res.status(400).send(
+                ApiResponse.error(
+                    'Validation failed',
+                    error.details.map(d => d.message).join(', ')
+                )
+            );
+        }
+
+        logger.info('Creating submission', { userId: value.userId, problemId: value.problemId });
+
+        const response = await this.submissionService.addSubmission(value);
+
+        logger.info('Submission created successfully', { submissionId: response.submission._id });
+
+        return res.status(201).send(
+            ApiResponse.success(response, 'Submission created successfully')
+        );
+    } catch (error) {
+        logger.error('Error creating submission', error);
+        const statusCode = error.statusCode || 500;
+        return res.status(statusCode).send(
+            ApiResponse.error(
+                error.message || 'Failed to create submission',
+                error.details || null
+            )
+        );
+    }
 }
 
 async function getSubmission(req, res) {
     try {
-        const { submissionId } = req.params;
-        
-        if (!submissionId) {
-            return res.status(400).send({
-                error: { submissionId: 'Submission ID is required' },
-                data: null,
-                success: false,
-                message: 'Submission ID is required'
-            });
+        const { error, value } = getSubmissionSchema.validate({ submissionId: req.params.submissionId });
+
+        if (error) {
+            logger.warn('Validation failed for get submission');
+            return res.status(400).send(
+                ApiResponse.error('Validation failed', error.details[0].message)
+            );
         }
 
-        const submission = await this.submissionRepository.findById(submissionId);
-        
+        logger.debug('Fetching submission', { submissionId: value.submissionId });
+
+        const submission = await this.submissionRepository.findById(value.submissionId);
+
         if (!submission) {
-            return res.status(404).send({
-                error: { notFound: 'Submission not found' },
-                data: null,
-                success: false,
-                message: 'Submission not found'
-            });
+            logger.warn('Submission not found', { submissionId: value.submissionId });
+            return res.status(404).send(
+                ApiResponse.error('Submission not found', null, null)
+            );
         }
 
-        return res.status(200).send({
-            error: {},
-            data: submission,
-            success: true,
-            message: 'Submission retrieved successfully'
-        });
+        logger.info('Submission retrieved', { submissionId: value.submissionId });
+
+        return res.status(200).send(
+            ApiResponse.success(submission, 'Submission retrieved successfully')
+        );
     } catch (error) {
-        console.error('Error in getSubmission:', error);
-        return res.status(500).send({
-            error: { internal: error.message },
-            data: null,
-            success: false,
-            message: 'Internal server error'
-        });
+        logger.error('Error retrieving submission', error);
+        return res.status(500).send(
+            ApiResponse.error('Internal server error', error.message)
+        );
     }
 }
 
 async function getUserSubmissions(req, res) {
     try {
-        const { userId } = req.query;
-        
-        if (!userId) {
-            return res.status(400).send({
-                error: { userId: 'User ID is required' },
-                data: null,
-                success: false,
-                message: 'User ID is required as query parameter'
-            });
+        const { error, value } = getUserSubmissionsSchema.validate(req.query);
+
+        if (error) {
+            logger.warn('Validation failed for get user submissions');
+            return res.status(400).send(
+                ApiResponse.error('Validation failed', error.details[0].message)
+            );
         }
 
-        const submissions = await this.submissionRepository.findByUserId(userId);
-        
-        return res.status(200).send({
-            error: {},
-            data: submissions,
-            success: true,
-            message: 'User submissions retrieved successfully'
-        });
+        logger.debug('Fetching user submissions', { userId: value.userId, limit: value.limit, offset: value.offset });
+
+        const result = await this.submissionRepository.findByUserId(value.userId, value.limit, value.offset);
+
+        logger.info('User submissions retrieved', { userId: value.userId, count: result.data.length });
+
+        return res.status(200).send(
+            ApiResponse.paginated(
+                result.data,
+                result.total,
+                value.limit,
+                value.offset,
+                'User submissions retrieved successfully'
+            )
+        );
     } catch (error) {
-        console.error('Error in getUserSubmissions:', error);
-        return res.status(500).send({
-            error: { internal: error.message },
-            data: null,
-            success: false,
-            message: 'Internal server error'
-        });
+        logger.error('Error retrieving user submissions', error);
+        return res.status(500).send(
+            ApiResponse.error('Internal server error', error.message)
+        );
     }
 }
 
@@ -88,60 +118,57 @@ async function handleEvaluationResult(req, res) {
         const { submissionId } = req.params;
         const evaluationResult = req.body;
 
-        if (!submissionId) {
-            return res.status(400).send({
-                error: { submissionId: 'Submission ID is required' },
-                success: false,
-                message: 'Submission ID is required'
-            });
+        // Validate request
+        const { error, value } = evaluationResultSchema.validate({
+            submissionId,
+            ...evaluationResult
+        });
+
+        if (error) {
+            logger.warn('Validation failed for evaluation result', { submissionId, error: error.details });
+            return res.status(400).send(
+                ApiResponse.error(
+                    'Validation failed',
+                    error.details[0].message
+                )
+            );
         }
 
-        if (!evaluationResult) {
-            return res.status(400).send({
-                error: { evaluationResult: 'Evaluation result is required' },
-                success: false,
-                message: 'Evaluation result is required'
-            });
-        }
+        logger.info('Processing evaluation result', { submissionId, status: value.overallStatus });
 
-        // Update submission with evaluation results
         const updatedSubmission = await this.submissionRepository.updateSubmission(
             submissionId,
             {
                 status: 'COMPLETED',
-                testResults: evaluationResult.testResults,
-                totalTestCases: evaluationResult.totalTestCases,
-                passedTestCases: evaluationResult.passedTestCases,
-                failedTestCases: evaluationResult.failedTestCases,
-                overallStatus: evaluationResult.overallStatus,
+                testResults: value.testResults,
+                totalTestCases: value.totalTestCases,
+                passedTestCases: value.passedTestCases,
+                failedTestCases: value.failedTestCases,
+                overallStatus: value.overallStatus,
                 completedAt: new Date(),
-                executionTime: evaluationResult.executionTime
+                executionTime: value.executionTime,
+                webhookFailed: false,
+                webhookAttempts: 0
             }
         );
 
         if (!updatedSubmission) {
-            return res.status(404).send({
-                error: { notFound: 'Submission not found' },
-                success: false,
-                message: 'Failed to update submission'
-            });
+            logger.error('Submission not found for update', null, { submissionId });
+            return res.status(404).send(
+                ApiResponse.error('Submission not found', null, null)
+            );
         }
 
-        console.log(`✅ Evaluation result received and saved for submission ${submissionId}`);
+        logger.info('Evaluation result processed successfully', { submissionId, status: value.overallStatus });
 
-        return res.status(200).send({
-            error: {},
-            data: updatedSubmission,
-            success: true,
-            message: 'Evaluation result processed successfully'
-        });
+        return res.status(200).send(
+            ApiResponse.success(updatedSubmission, 'Evaluation result processed successfully')
+        );
     } catch (error) {
-        console.error('❌ Error in handleEvaluationResult:', error);
-        return res.status(500).send({
-            error: { internal: error.message },
-            success: false,
-            message: 'Internal server error while processing evaluation result'
-        });
+        logger.error('Error processing evaluation result', error, { submissionId: req.params.submissionId });
+        return res.status(500).send(
+            ApiResponse.error('Internal server error', error.message)
+        );
     }
 }
 
