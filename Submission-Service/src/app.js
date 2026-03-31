@@ -4,7 +4,7 @@ const repositoryPlugin = require('./repositories/repositoryPlugin');
 
 async function app(fastify, options) {
     await fastify.register(require('@fastify/cors'), { 
-        origin: "http://localhost:5173",
+        origin: true,
         methods: ['GET', 'PUT', 'POST', 'DELETE'], // Specify allowed HTTP methods
         allowedHeaders: ['Content-Type', 'Authorization'], // Specify allowed headers
     });
