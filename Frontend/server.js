@@ -9,8 +9,7 @@ const ROOT = __dirname;
 const PROXY_TARGETS = {
   user: 'http://127.0.0.1:16000',
   problem: 'http://127.0.0.1:13000',
-  submission: 'http://127.0.0.1:15000',
-  socket: 'http://127.0.0.1:13001'
+  submission: 'http://127.0.0.1:15000'
 };
 
 const MIME_TYPES = {

@@ -73,12 +73,9 @@
         </div>
     </div>
 
-    <!-- Socket.IO client -->
-    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
     <script src="/js/config.js"></script>
     <script src="/js/auth.js"></script>
     <script src="/js/api.js"></script>
-    <script src="/js/realtime.js"></script>
     <script src="/js/ui.js"></script>
     <script>
         const urlParams = new URLSearchParams(window.location.search);
@@ -90,7 +87,6 @@
         let pollTimer = null;
         let activePollingSubmissionId = null;
         let isSubmissionResolved = false;
-        let unsubscribeRealtime = null;
 
         // Auto-save interval
         let autoSaveInterval = null;
@@ -260,10 +256,7 @@
                     statusSpan.textContent = 'Submitted! Waiting for results...';
                     statusSpan.className = 'status-processing';
 
-                    // Connect realtime channel once and use submission-id filtering.
-                    ensureRealtime(user._id);
-
-                    // Also poll as a fallback
+                    // Poll for submission results
                     pollSubmission(currentSubmissionId);
                 } else {
                     showToast(data.message || 'Submission failed.', 'error');
@@ -280,25 +273,7 @@
             submitBtn.textContent = 'Submit';
         }
 
-        function ensureRealtime(userId) {
-            if (unsubscribeRealtime) {
-                Realtime.connect(userId);
-                return;
-            }
 
-            unsubscribeRealtime = Realtime.subscribe((event, payload) => {
-                if (event !== 'submission') return;
-
-                const incomingId = payload && (payload.submissionId || payload._id);
-                if (incomingId && currentSubmissionId && incomingId !== currentSubmissionId) {
-                    return;
-                }
-
-                displayResults(payload);
-            });
-
-            Realtime.connect(userId);
-        }
 
         // --- Polling fallback ---
         async function pollSubmission(submissionId) {
@@ -435,21 +410,10 @@
             loadProblem();
         }
 
-        // Connect socket on load if logged in
-        if (Auth.isLoggedIn()) {
-            const user = Auth.getUser();
-            if (user && user._id) ensureRealtime(user._id);
-        }
-
         // Save on page leave
         window.addEventListener('beforeunload', () => {
             saveCurrentCode();
             clearSubmissionPolling();
-            if (unsubscribeRealtime) {
-                unsubscribeRealtime();
-                unsubscribeRealtime = null;
-            }
-            Realtime.disconnect();
         });
     </script>
 </body>

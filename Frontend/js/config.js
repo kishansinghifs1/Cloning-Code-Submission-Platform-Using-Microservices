@@ -6,7 +6,6 @@
     window.CONFIG = {
         USER_SERVICE_URL: `${origin}/proxy/user/api/v1`,
         PROBLEM_SERVICE_URL: `${origin}/proxy/problem/api/v1`,
-        SUBMISSION_SERVICE_URL: `${origin}/proxy/submission/api/v1`,
-        SOCKET_URL: `${origin}/proxy/socket`
+        SUBMISSION_SERVICE_URL: `${origin}/proxy/submission/api/v1`
     };
 })();
