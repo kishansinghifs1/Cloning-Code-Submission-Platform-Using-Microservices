@@ -15,12 +15,12 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.text());
 
 app.use(cors({
-    origin: ["http://localhost:5173"],
+    origin: true,
     methods: ['GET', 'PUT', 'POST', 'DELETE'], // Specify allowed HTTP methods
     allowedHeaders: ['Content-Type', 'Authorization'], // Specify allowed headers
 }));
 
-//all the request that starts with /api will be mapped to apiRouter
+
 app.use('/api', apiRouter);
 
 
@@ -28,7 +28,6 @@ app.get('/ping', (req, res) => {
     return res.json({ message: 'Problem Service is alive' });
 });
 
-//global catches for the error handler 
 app.use(errorHandler);
 
 
@@ -41,7 +40,6 @@ app.listen(PORT, async () => {
     }
 });
 
-// Graceful Shutdown
 async function shutdown(signal) {
     console.log(`Received ${signal}. Shutting down gracefully...`);
     await connectToDB.disconnect();

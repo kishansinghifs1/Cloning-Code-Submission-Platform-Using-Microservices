@@ -17,11 +17,13 @@ class DBConnection {
         }
 
         try {
-            if (NODE_ENV == "development") {
-                await mongoose.connect(ATLAS_DB_URL);
-                this.isConnected = true;
-                console.log('DB Connection: New connection established');
+            if (!ATLAS_DB_URL) {
+                throw new Error('ATLAS_DB_URL is not configured');
             }
+
+            await mongoose.connect(ATLAS_DB_URL);
+            this.isConnected = true;
+            console.log(`DB Connection: New connection established (${NODE_ENV || 'unknown'})`);
         } catch (error) {
             console.log('Unable to connect to the DB server');
             console.log(error);
