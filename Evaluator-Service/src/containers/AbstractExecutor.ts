@@ -42,8 +42,16 @@ export abstract class AbstractExecutor implements CodeExecutorStrategy {
                 follow: true
             });
 
+            let accumulatedSize = 0;
+            const MAX_MEMORY_LIMIT = 5 * 1024 * 1024; // 5MB
+
             loggerStream.on('data', (chunk) => {
-                rawLogBuffer.push(chunk);
+                accumulatedSize += chunk.length;
+                if (accumulatedSize > MAX_MEMORY_LIMIT) {
+                    (loggerStream as import('stream').Readable).destroy(new Error("Output Limit Exceeded (OLE)"));
+                } else {
+                    rawLogBuffer.push(chunk);
+                }
             });
 
             try {
@@ -65,8 +73,19 @@ export abstract class AbstractExecutor implements CodeExecutorStrategy {
                     } catch (killError) {
                         console.error("Error killing container on timeout:", killError);
                     }
+                } else if (error instanceof Error && error.message === "Output Limit Exceeded (OLE)") {
+                    try {
+                        // Check if container is still running before killing
+                        const containerState = await container.inspect();
+                        if (containerState.State.Running) {
+                            await container.kill();
+                        }
+                    } catch (killError) {
+                        console.error("Error killing container on OLE:", killError);
+                    }
+                    return { output: "Output Limit Exceeded", status: "ERROR" };
                 }
-                return { output: error as string, status: "ERROR" };
+                return { output: (error instanceof Error) ? error.message : String(error), status: "ERROR" };
             }
         } catch (error) {
             console.error("Error during code execution:", error);

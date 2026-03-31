@@ -25,7 +25,7 @@ class ProblemRepository {
 
     async getAllProblems() {
         try {
-            const problems = await Problem.find({});
+            const problems = await Problem.find({}).lean();
             return problems;
         } catch (error) {
             logger.error(error);
@@ -35,7 +35,7 @@ class ProblemRepository {
 
     async getProblem(id) {
         try {
-            const problem = await Problem.findById(id);
+            const problem = await Problem.findById(id).lean();
             if (!problem) {
                 throw new NotFound("Problem", id);
             }
