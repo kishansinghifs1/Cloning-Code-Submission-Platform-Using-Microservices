@@ -1,15 +1,14 @@
-version: '3.8'
-
 services:
   evaluator_service:
     build: ./Evaluator-Service
     container_name: evaluator_service
     ports:
-      - "4000:4000"
+      - "14000:4000"
     environment:
       - PORT=4000
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      - SUBMISSION_SERVICE_WEBHOOK_BASE_URL=http://submission_service:5000/api/v1/submissions
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     depends_on:
@@ -22,12 +21,12 @@ services:
     build: ./Problem-Service
     container_name: problem_service
     ports:
-      - "3000:3000"
+      - "13000:3000"
     environment:
       - PORT=3000
-      - NODE_ENV=development
-      - ATLAS_DB_URL=mongodb+srv://problem-service:kishan@cluster-problem-service.vypzmrx.mongodb.net/?appName=Cluster-Problem-Service
-      - LOG_DB_URL=mongodb+srv://problem-service:kishan@cluster-problem-service.vypzmrx.mongodb.net/?appName=Cluster-Problem-Service
+      - NODE_ENV=production
+      - ATLAS_DB_URL=${ATLAS_DB_URL}
+      - LOG_DB_URL=${LOG_DB_URL}
     networks:
       - leetcode_network
 
@@ -35,13 +34,13 @@ services:
     build: ./Submission-Service
     container_name: submission_service
     ports:
-      - "5000:5000"
+      - "15000:5000"
     environment:
       - PORT=5000
       - REDIS_PORT=6379
       - REDIS_HOST=redis
-      - ATLAS_DB_URL=mongodb+srv://problem-service:kishan@cluster-problem-service.vypzmrx.mongodb.net/?appName=Cluster-Problem-Service
-      - NODE_ENV=development
+      - ATLAS_DB_URL=${ATLAS_DB_URL}
+      - NODE_ENV=production
       - PROBLEM_API_TIMEOUT=5000
       - WEBHOOK_TIMEOUT=5000
       - SUBMISSION_TIMEOUT=3000
@@ -61,14 +60,14 @@ services:
     build: ./User-Service
     container_name: user_service
     ports:
-      - "6000:6000"
+      - "16000:6000"
     environment:
       - PORT=6000
-      - NODE_ENV=development
-      - ATLAS_DB_URL=mongodb+srv://problem-service:kishan@cluster-problem-service.vypzmrx.mongodb.net/?appName=Cluster-Problem-Service
-      - JWT_SECRET=Sunshine
+      - NODE_ENV=production
+      - ATLAS_DB_URL=${ATLAS_DB_URL}
+      - JWT_SECRET=${JWT_SECRET}
       - JWT_EXPIRES_IN=24h
-      - JWT_REFRESH_SECRET=Blue
+      - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
       - JWT_REFRESH_EXPIRES_IN=7d
     networks:
       - leetcode_network
@@ -76,8 +75,6 @@ services:
   redis:
     image: redis:alpine
     container_name: leetcode_redis
-    ports:
-      - "6379:6379"
     networks:
       - leetcode_network
 
