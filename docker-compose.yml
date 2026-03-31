@@ -91,6 +91,10 @@ services:
       - JWT_EXPIRES_IN=24h
       - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
       - JWT_REFRESH_EXPIRES_IN=7d
+      - AWS_REGION=${AWS_REGION}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - S3_BUCKET_NAME=${S3_BUCKET_NAME}
     networks:
       - leetcode_network
 

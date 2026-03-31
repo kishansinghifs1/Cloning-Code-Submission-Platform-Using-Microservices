@@ -34,6 +34,10 @@ const userSchema = new mongoose.Schema({
         trim: true,
         maxlength: [50, 'Last name must not exceed 50 characters']
     },
+    avatarUrl: {
+        type: String,
+        default: null
+    },
     role: {
         type: String,
         enum: {

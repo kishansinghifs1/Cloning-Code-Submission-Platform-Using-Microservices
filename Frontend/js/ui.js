@@ -26,7 +26,10 @@ function updateNav() {
         navLinks.innerHTML = `
             <a href="/pages/problems.html">Problems</a>
             <a href="/pages/submissions.html">Submissions</a>
-            <a href="/pages/profile.html">${user ? user.username : 'Profile'}</a>
+            <a href="/pages/profile.html" class="nav-profile-link">
+                <img src="${user ? (user.avatarUrl || '/images/default-avatar.png') : '/images/default-avatar.png'}" class="nav-avatar" alt="Profile">
+                <span>${user ? user.username : 'Profile'}</span>
+            </a>
             <a href="#" onclick="Auth.logout(); return false;">Logout</a>
         `;
     } else {

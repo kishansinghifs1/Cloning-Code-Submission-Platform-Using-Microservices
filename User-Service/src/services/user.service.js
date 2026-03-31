@@ -5,6 +5,8 @@ const BadRequest = require('../errors/badrequest.error');
 const Unauthorized = require('../errors/unauthorized.error');
 const NotFound = require('../errors/notfound.error');
 const logger = require('../config/logger.config');
+const { PutObjectCommand } = require('@aws-sdk/client-s3');
+const s3Client = require('../config/aws.config');
 
 class UserService {
     constructor() {
@@ -220,6 +222,51 @@ class UserService {
             };
         } catch (error) {
             logger.error('UserService.changePassword:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Upload user avatar to S3
+     * @param {string} userId - User ID
+     * @param {Buffer} fileBuffer - Image buffer
+     * @param {string} mimetype - Image MIME type
+     * @returns {Promise<Object>} - Updated user profile
+     */
+    async uploadAvatar(userId, fileBuffer, mimetype) {
+        try {
+            const user = await this.userRepository.getUserById(userId);
+            if (!user) {
+                throw new NotFound('User not found');
+            }
+
+            const extension = mimetype.split('/')[1] || 'png';
+            const fileName = `avatars/${userId}-${Date.now()}.${extension}`;
+            const bucketName = process.env.S3_BUCKET_NAME;
+
+            if (!bucketName) {
+                throw new Error('S3_BUCKET_NAME is not configured');
+            }
+
+            const command = new PutObjectCommand({
+                Bucket: bucketName,
+                Key: fileName,
+                Body: fileBuffer,
+                ContentType: mimetype
+            });
+
+            await s3Client.send(command);
+
+            const avatarUrl = `https://${bucketName}.s3.${process.env.AWS_REGION}.amazonaws.com/${fileName}`;
+
+            user.avatarUrl = avatarUrl;
+            await user.save();
+
+            logger.info(`Avatar updated for user: ${user.email}`);
+
+            return user.toJSON();
+        } catch (error) {
+            logger.error('UserService.uploadAvatar:', error);
             throw error;
         }
     }

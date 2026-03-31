@@ -148,6 +148,21 @@ a:hover {
     background: rgba(212, 246, 243, 0.72);
 }
 
+.nav-profile-link {
+    display: flex !important;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 12px 4px 6px !important; 
+}
+
+.nav-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid rgba(15, 118, 110, 0.3);
+}
+
 .container,
 .container-wide {
     width: min(1100px, 100% - 34px);

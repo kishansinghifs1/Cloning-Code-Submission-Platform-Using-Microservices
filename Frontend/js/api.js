@@ -39,9 +39,15 @@ const API = {
     async request(url, options = {}) {
         const token = Auth.getAccessToken();
         const headers = {
-            'Content-Type': 'application/json',
             ...(options.headers || {})
         };
+        
+        // Only set default Content-Type if it hasn't been explicitly set to null
+        if (options.headers && options.headers['Content-Type'] === null) {
+            delete headers['Content-Type'];
+        } else if (!headers['Content-Type']) {
+            headers['Content-Type'] = 'application/json';
+        }
         if (token) {
             headers['Authorization'] = 'Bearer ' + token;
         }
@@ -109,6 +115,14 @@ const API = {
         return this.request(url, {
             method: 'POST',
             body: JSON.stringify(body)
+        });
+    },
+
+    upload(url, formData) {
+        return this.request(url, {
+            method: 'POST',
+            headers: { 'Content-Type': null }, 
+            body: formData
         });
     },
 

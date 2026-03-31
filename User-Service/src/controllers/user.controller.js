@@ -168,6 +168,43 @@ class UserController {
             next(error);
         }
     }
+
+    /**
+     * Upload Avatar
+     * POST /api/v1/users/avatar
+     */
+    async uploadAvatar(req, res, next) {
+        try {
+            const userId = req.user.id;
+            
+            if (!req.file) {
+                return res.status(StatusCodes.BAD_REQUEST).json({
+                    success: false,
+                    message: 'No image file provided',
+                    data: {}
+                });
+            }
+
+            const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/webp'];
+            if (!allowedMimeTypes.includes(req.file.mimetype)) {
+                return res.status(StatusCodes.BAD_REQUEST).json({
+                    success: false,
+                    message: 'Invalid file type. Only JPG, PNG, and WebP are allowed.',
+                    data: {}
+                });
+            }
+
+            const updatedUser = await this.userService.uploadAvatar(userId, req.file.buffer, req.file.mimetype);
+
+            return res.status(StatusCodes.OK).json({
+                success: true,
+                message: 'Avatar updated successfully',
+                data: updatedUser
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
 }
 
 module.exports = UserController;
