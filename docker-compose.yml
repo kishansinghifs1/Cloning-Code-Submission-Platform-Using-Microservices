@@ -1,6 +1,25 @@
 services:
+  frontend:
+    build: ./Frontend
+    image: ${DOCKERHUB_USERNAME:-local}/codejudge-frontend:latest
+    container_name: frontend
+    ports:
+      - "5500:5500"
+    environment:
+      - PORT=5500
+      - USER_SERVICE_URL=http://user_service:6000
+      - PROBLEM_SERVICE_URL=http://problem_service:3000
+      - SUBMISSION_SERVICE_URL=http://submission_service:5000
+    depends_on:
+      - user_service
+      - problem_service
+      - submission_service
+    networks:
+      - leetcode_network
+
   evaluator_service:
     build: ./Evaluator-Service
+    image: ${DOCKERHUB_USERNAME:-local}/codejudge-evaluator:latest
     container_name: evaluator_service
     ports:
       - "14000:4000"
@@ -19,6 +38,7 @@ services:
 
   problem_service:
     build: ./Problem-Service
+    image: ${DOCKERHUB_USERNAME:-local}/codejudge-problem:latest
     container_name: problem_service
     ports:
       - "13000:3000"
@@ -32,6 +52,7 @@ services:
 
   submission_service:
     build: ./Submission-Service
+    image: ${DOCKERHUB_USERNAME:-local}/codejudge-submission:latest
     container_name: submission_service
     ports:
       - "15000:5000"
@@ -58,6 +79,7 @@ services:
 
   user_service:
     build: ./User-Service
+    image: ${DOCKERHUB_USERNAME:-local}/codejudge-user:latest
     container_name: user_service
     ports:
       - "16000:6000"

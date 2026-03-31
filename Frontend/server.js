@@ -3,13 +3,13 @@ const fs = require('fs');
 const path = require('path');
 const { URL } = require('url');
 
-const PORT = 5500;
+const PORT = process.env.PORT || 5500;
 const ROOT = __dirname;
 
 const PROXY_TARGETS = {
-  user: 'http://127.0.0.1:16000',
-  problem: 'http://127.0.0.1:13000',
-  submission: 'http://127.0.0.1:15000'
+  user: process.env.USER_SERVICE_URL || 'http://127.0.0.1:16000',
+  problem: process.env.PROBLEM_SERVICE_URL || 'http://127.0.0.1:13000',
+  submission: process.env.SUBMISSION_SERVICE_URL || 'http://127.0.0.1:15000'
 };
 
 const MIME_TYPES = {
