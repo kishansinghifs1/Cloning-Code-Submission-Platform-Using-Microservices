@@ -359,6 +359,8 @@ Risks found:
 - Submission-Service uses custom JSON logger class.
 - Evaluator uses console logging and Bull Board UI.
 - Bull Board dashboard endpoint: `http://<evaluator-host>:4000/ui` (inside compose mapped to host `14000/ui`).
+- Grafana dashboard has been added to the documentation assets for monitoring visibility:
+  - `docs/images/grafana.png`
 
 ## 14. Suggested Documentation Evolution
 
