@@ -105,8 +105,15 @@ export default class SubmissionJob implements IJob {
 
   private sendWebhookCallback = async (evaluationResult: EvaluationResult) => {
     try {
-      const webhookUrl = process.env.SUBMISSION_SERVICE_WEBHOOK_URL ||
-        `http://localhost:5000/api/v1/submissions/${evaluationResult.submissionId}/evaluate-result`;
+      const webhookBaseUrl =
+        process.env.SUBMISSION_SERVICE_WEBHOOK_BASE_URL ||
+        process.env.SUBMISSION_SERVICE_WEBHOOK_URL ||
+        "http://submission_service:5000/api/v1/submissions";
+
+      const webhookUrl = webhookBaseUrl.includes(":submissionId")
+        ? webhookBaseUrl.replace(":submissionId", evaluationResult.submissionId) +
+          "/evaluate-result"
+        : `${webhookBaseUrl}/${evaluationResult.submissionId}/evaluate-result`;
 
       console.log(`Sending webhook callback to: ${webhookUrl}`);
 
