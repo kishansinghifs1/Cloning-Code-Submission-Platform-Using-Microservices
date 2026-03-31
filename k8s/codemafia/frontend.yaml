@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+      - name: frontend
+        image: kishansingh1/codemafia:frontend
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 5500
+        env:
+        - name: PORT
+          value: "5500"
+        envFrom:
+        - configMapRef:
+            name: platform-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-service
+  namespace: default
+spec:
+  type: NodePort
+  ports:
+  - port: 5500
+    targetPort: 5500
+    nodePort: 30500
+  selector:
+    app: frontend

@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: evaluator-service
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: evaluator-service
+  template:
+    metadata:
+      labels:
+        app: evaluator-service
+    spec:
+      containers:
+      - name: evaluator-service
+        image: kishansingh1/codemafia:evaluator
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 4000
+        env:
+        - name: PORT
+          value: "4000"
+        envFrom:
+        - configMapRef:
+            name: platform-config
+        volumeMounts:
+        - name: docker-socket
+          mountPath: /var/run/docker.sock
+      volumes:
+      - name: docker-socket
+        hostPath:
+          path: /var/run/docker.sock
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: evaluator-service
+  namespace: default
+spec:
+  ports:
+  - port: 4000
+    targetPort: 4000
+  selector:
+    app: evaluator-service

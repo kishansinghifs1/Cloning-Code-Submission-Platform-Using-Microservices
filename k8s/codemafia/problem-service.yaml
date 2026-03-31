@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: problem-service
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: problem-service
+  template:
+    metadata:
+      labels:
+        app: problem-service
+    spec:
+      containers:
+      - name: problem-service
+        image: kishansingh1/codemafia:problem
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 3000
+        env:
+        - name: PORT
+          value: "3000"
+        envFrom:
+        - configMapRef:
+            name: platform-config
+        - secretRef:
+            name: platform-secrets
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: problem-service
+  namespace: default
+spec:
+  ports:
+  - port: 3000
+    targetPort: 3000
+  selector:
+    app: problem-service

@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: platform-config
+  namespace: default
+data:
+  NODE_ENV: "production"
+  USER_SERVICE_URL: "http://user-service:6000"
+  PROBLEM_SERVICE_URL: "http://problem-service:3000"
+  SUBMISSION_SERVICE_URL: "http://submission-service:5000"
+  EVALUATOR_SERVICE_URL: "http://evaluator-service:4000"
+  PROBLEM_ADMIN_SERVICE_URL: "http://problem-service:3000"
+  REDIS_HOST: "redis"
+  REDIS_PORT: "6379"
+  REDIS_DB: "0"
+  SUBMISSION_SERVICE_WEBHOOK_BASE_URL: "http://submission-service:5000/api/v1/submissions"
+  SUBMISSION_SERVICE_WEBHOOK_URL: "http://submission-service:5000/api/v1/submissions"
+  PROBLEM_API_TIMEOUT: "5000"
+  WEBHOOK_TIMEOUT: "5000"
+  SUBMISSION_TIMEOUT: "3000"
+  QUEUE_NAME: "SubmissionQueue"
+  JOB_NAME: "SubmissionJob"
