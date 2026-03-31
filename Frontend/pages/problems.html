@@ -13,32 +13,32 @@
     </nav>
 
     <div class="container">
-        <h1 style="margin-bottom: 15px;">Problems</h1>
+        <h1 class="page-title">Problems</h1>
 
         <!-- Filters -->
         <div class="filter-bar">
-            <input type="text" id="search-input" placeholder="Search problems..." style="flex: 1; min-width: 200px;">
+            <input type="text" id="search-input" class="filter-search" placeholder="Search problems...">
             <select id="difficulty-filter">
                 <option value="">All Difficulties</option>
                 <option value="easy">Easy</option>
                 <option value="medium">Medium</option>
                 <option value="hard">Hard</option>
             </select>
-            <button class="btn" onclick="loadProblems()">Search</button>
+            <button class="btn" onclick="applyFilters()">Search</button>
         </div>
 
         <!-- Problems table -->
-        <div class="card" style="padding: 0; overflow: hidden;">
+        <div class="card table-wrapper">
             <table>
                 <thead>
                     <tr>
-                        <th style="width: 50px;">#</th>
+                        <th class="col-index">#</th>
                         <th>Title</th>
-                        <th style="width: 100px;">Difficulty</th>
+                        <th class="col-difficulty">Difficulty</th>
                     </tr>
                 </thead>
                 <tbody id="problems-body">
-                    <tr><td colspan="3" class="text-center" style="padding: 30px;">Loading...</td></tr>
+                    <tr><td colspan="3" class="text-center table-loading">Loading...</td></tr>
                 </tbody>
             </table>
         </div>
@@ -55,9 +55,14 @@
         let currentPage = 1;
         const limit = 15;
 
+        function applyFilters() {
+            currentPage = 1;
+            loadProblems();
+        }
+
         async function loadProblems() {
             const tbody = document.getElementById('problems-body');
-            tbody.innerHTML = '<tr><td colspan="3" class="text-center" style="padding: 30px;"><span class="spinner"></span> Loading...</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="3" class="text-center table-loading"><span class="spinner"></span> Loading...</td></tr>';
 
             const search = document.getElementById('search-input').value.trim();
             const difficulty = document.getElementById('difficulty-filter').value;
@@ -73,7 +78,7 @@
                     tbody.innerHTML = '';
                     data.data.forEach((problem, index) => {
                         const row = document.createElement('tr');
-                        row.style.cursor = 'pointer';
+                        row.className = 'problem-table-row';
                         row.onclick = () => {
                             window.location.href = '/pages/problem?id=' + problem._id;
                         };
@@ -101,11 +106,11 @@
                         pagination.appendChild(nextBtn);
                     }
                 } else {
-                    tbody.innerHTML = '<tr><td colspan="3" class="text-center" style="padding: 30px; color: #888;">No problems found.</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="3" class="text-center table-empty">No problems found.</td></tr>';
                     document.getElementById('pagination').innerHTML = '';
                 }
             } catch (err) {
-                tbody.innerHTML = '<tr><td colspan="3" class="text-center" style="padding: 30px; color: #c62828;">Error loading problems. Check if Problem-Service is running.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="3" class="text-center table-error">Error loading problems. Check if Problem-Service is running.</td></tr>';
             }
         }
 
@@ -118,14 +123,12 @@
         // Also search on Enter key
         document.getElementById('search-input').addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
-                currentPage = 1;
-                loadProblems();
+                applyFilters();
             }
         });
 
         document.getElementById('difficulty-filter').addEventListener('change', () => {
-            currentPage = 1;
-            loadProblems();
+            applyFilters();
         });
 
         loadProblems();

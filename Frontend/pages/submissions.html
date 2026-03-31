@@ -13,7 +13,7 @@
     </nav>
 
     <div class="container">
-        <h1 style="margin-bottom: 15px;">My Submissions</h1>
+        <h1 class="page-title">My Submissions</h1>
 
         <div id="not-logged-in" class="msg msg-info hidden">
             Please <a href="/pages/login.html">login</a> to view your submissions.
@@ -53,7 +53,7 @@
             </div>
 
             <!-- Submissions table -->
-            <div class="card" style="padding: 0; overflow: hidden;">
+            <div class="card table-wrapper">
                 <table>
                     <thead>
                         <tr>
@@ -67,7 +67,7 @@
                         </tr>
                     </thead>
                     <tbody id="submissions-body">
-                        <tr><td colspan="7" class="text-center" style="padding: 30px;">Loading...</td></tr>
+                        <tr><td colspan="7" class="text-center table-loading">Loading...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -96,7 +96,7 @@
             if (!user) return;
 
             const tbody = document.getElementById('submissions-body');
-            tbody.innerHTML = '<tr><td colspan="7" class="text-center" style="padding: 30px;"><span class="spinner"></span> Loading...</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center table-loading"><span class="spinner"></span> Loading...</td></tr>';
 
             const status = document.getElementById('status-filter').value;
             const offset = (currentPage - 1) * limit;
@@ -143,17 +143,17 @@
                             : 'status-' + (sub.status || '').toLowerCase();
 
                         const row = document.createElement('tr');
-                        row.style.cursor = 'pointer';
+                        row.className = 'problem-table-row';
                         row.onclick = () => viewSubmission(sub);
                         const problemName = problemNameMap[sub.problemId] || 'Unknown Problem';
                         row.innerHTML = `
                             <td>${(currentPage - 1) * limit + i + 1}</td>
-                            <td style="font-size: 12px; color: #1976d2; text-decoration: none; cursor: pointer;" onclick="event.stopPropagation(); window.location.href='/pages/problem.html?id=${sub.problemId}'"><strong>${problemName}</strong></td>
+                            <td class="submission-problem-link" onclick="event.stopPropagation(); window.location.href='/pages/problem.html?id=${sub.problemId}'"><strong>${problemName}</strong></td>
                             <td>${sub.language || '-'}</td>
                             <td>${sub.status || '-'}</td>
-                            <td><span class="${statusClass}" style="font-weight: 600;">${sub.overallStatus || '-'}</span></td>
+                            <td><span class="${statusClass} status-strong">${sub.overallStatus || '-'}</span></td>
                             <td>${sub.passedTestCases || 0}/${sub.totalTestCases || 0}</td>
-                            <td style="font-size: 12px;">${sub.submittedAt ? new Date(sub.submittedAt).toLocaleString() : '-'}</td>
+                            <td class="submission-date">${sub.submittedAt ? new Date(sub.submittedAt).toLocaleString() : '-'}</td>
                         `;
                         tbody.appendChild(row);
                     });
@@ -174,7 +174,7 @@
                         pagination.appendChild(next);
                     }
                 } else {
-                    tbody.innerHTML = '<tr><td colspan="7" class="text-center" style="padding: 30px; color: #888;">No submissions found.</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="7" class="text-center table-empty">No submissions found.</td></tr>';
                     document.getElementById('pagination').innerHTML = '';
 
                     document.getElementById('stat-total').textContent = '0';
@@ -183,23 +183,23 @@
                     document.getElementById('stat-failed').textContent = '0';
                 }
             } catch (err) {
-                tbody.innerHTML = '<tr><td colspan="7" class="text-center" style="padding: 30px; color: #c62828;">Error loading submissions.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center table-error">Error loading submissions.</td></tr>';
             }
         }
 
         function viewSubmission(sub) {
             // Show a simple modal / detail view
             let html = `
-                <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); z-index: 100; display: flex; align-items: center; justify-content: center;"
+                <div class="submission-modal-backdrop"
                     onclick="if(event.target===this) this.remove();">
-                    <div style="background: #fff; padding: 25px; border-radius: 4px; max-width: 700px; width: 90%; max-height: 80vh; overflow: auto;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                            <h2 style="font-size: 18px;">Submission Details</h2>
-                            <button class="btn btn-sm" onclick="this.closest('[style*=fixed]').remove()">✕ Close</button>
+                    <div class="submission-modal">
+                        <div class="submission-modal-header">
+                            <h2>Submission Details</h2>
+                            <button class="btn btn-sm" onclick="this.closest('.submission-modal-backdrop').remove()">Close</button>
                         </div>
 
-                        <div style="margin-bottom: 10px; font-size: 14px;">
-                            <strong>Status:</strong> <span class="status-${(sub.overallStatus || '').toLowerCase()}" style="font-weight: 600;">${sub.overallStatus || sub.status || '-'}</span>
+                        <div class="submission-meta">
+                            <strong>Status:</strong> <span class="status-${(sub.overallStatus || '').toLowerCase()} status-strong">${sub.overallStatus || sub.status || '-'}</span>
                             &nbsp;&nbsp;
                             <strong>Language:</strong> ${sub.language || '-'}
                             &nbsp;&nbsp;
@@ -209,15 +209,15 @@
             `;
 
             if (sub.testResults && sub.testResults.length > 0) {
-                html += '<table style="margin-top: 10px;"><thead><tr><th>#</th><th>Input</th><th>Expected</th><th>Actual</th><th>Status</th></tr></thead><tbody>';
+                html += '<table class="submission-mini-table"><thead><tr><th>#</th><th>Input</th><th>Expected</th><th>Actual</th><th>Status</th></tr></thead><tbody>';
                 sub.testResults.forEach((tr, i) => {
                     const pass = tr.status === 'PASS';
                     html += `
                         <tr>
                             <td>${i + 1}</td>
-                            <td><code style="font-size: 12px;">${escapeHtml(tr.input || '')}</code></td>
-                            <td><code style="font-size: 12px;">${escapeHtml(tr.expectedOutput || '')}</code></td>
-                            <td><code style="font-size: 12px;">${escapeHtml(tr.actualOutput || '')}</code></td>
+                            <td><code class="submission-inline-code">${escapeHtml(tr.input || '')}</code></td>
+                            <td><code class="submission-inline-code">${escapeHtml(tr.expectedOutput || '')}</code></td>
+                            <td><code class="submission-inline-code">${escapeHtml(tr.actualOutput || '')}</code></td>
                             <td>${pass ? '✓' : '✗'}</td>
                         </tr>
                     `;
@@ -227,8 +227,8 @@
 
             if (sub.code) {
                 html += `
-                    <h3 style="margin-top: 15px; font-size: 14px;">Code:</h3>
-                    <pre style="background: #fafafa; padding: 10px; border: 1px solid #eee; border-radius: 3px; font-size: 12px; max-height: 200px; overflow: auto;">${escapeHtml(sub.code)}</pre>
+                    <h3 class="submission-section-title">Code:</h3>
+                    <pre class="submission-code-block">${escapeHtml(sub.code)}</pre>
                 `;
             }
 

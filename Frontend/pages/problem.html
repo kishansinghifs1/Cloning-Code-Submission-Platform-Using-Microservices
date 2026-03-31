@@ -17,26 +17,26 @@
             <!-- Left: Problem description -->
             <div class="split-left" id="problem-panel">
                 <div class="card">
-                    <div id="problem-loading" class="text-center" style="padding: 30px;">
+                    <div id="problem-loading" class="text-center panel-loading">
                         <span class="spinner"></span> Loading problem...
                     </div>
                     <div id="problem-content" class="hidden">
-                        <h1 id="problem-title" style="font-size: 22px; margin-bottom: 5px;"></h1>
+                        <h1 id="problem-title" class="problem-title"></h1>
                         <span id="problem-difficulty" class="badge"></span>
 
-                        <hr style="margin: 15px 0; border: none; border-top: 1px solid #eee;">
+                        <hr class="section-separator">
 
-                        <div id="problem-description" style="white-space: pre-wrap; font-size: 14px; line-height: 1.7;"></div>
+                        <div id="problem-description" class="text-block"></div>
 
-                        <hr style="margin: 15px 0; border: none; border-top: 1px solid #eee;">
+                        <hr class="section-separator">
 
-                        <h3 style="margin-bottom: 10px;">Test Cases</h3>
+                        <h3 class="section-title">Test Cases</h3>
                         <div id="test-cases"></div>
 
-                        <div id="editorial-section" class="hidden" style="margin-top: 15px;">
-                            <hr style="margin: 15px 0; border: none; border-top: 1px solid #eee;">
-                            <h3 style="margin-bottom: 10px;">Editorial</h3>
-                            <div id="editorial-content" style="white-space: pre-wrap; font-size: 14px;"></div>
+                        <div id="editorial-section" class="hidden editorial-section">
+                            <hr class="section-separator">
+                            <h3 class="section-title">Editorial</h3>
+                            <div id="editorial-content" class="text-block"></div>
                         </div>
                     </div>
                 </div>
@@ -60,13 +60,13 @@
 
                 <div class="editor-actions">
                     <button class="btn btn-primary" id="submit-btn" onclick="submitCode()">Submit</button>
-                    <span id="submit-status" style="font-size: 13px; color: #888; line-height: 32px;"></span>
+                    <span id="submit-status" class="submit-status"></span>
                 </div>
 
                 <!-- Results panel -->
                 <div id="result-panel" class="result-panel hidden">
                     <h3>Submission Result</h3>
-                    <div id="result-summary" style="margin: 10px 0;"></div>
+                    <div id="result-summary" class="result-summary"></div>
                     <div id="result-details"></div>
                 </div>
             </div>
@@ -92,7 +92,7 @@
         let autoSaveInterval = null;
 
         if (!problemId) {
-            document.getElementById('problem-loading').innerHTML = '<span style="color:#c62828;">No problem ID provided.</span>';
+            document.getElementById('problem-loading').innerHTML = '<span class="status-failed">No problem ID provided.</span>';
         }
 
         // --- Load problem ---
@@ -118,7 +118,7 @@
                     if (problem.testCases && problem.testCases.length > 0) {
                         problem.testCases.forEach((tc, i) => {
                             testCasesDiv.innerHTML += `
-                                <div style="background: #fafafa; border: 1px solid #eee; padding: 10px; border-radius: 3px; margin-bottom: 8px; font-size: 13px;">
+                                <div class="test-case-box">
                                     <strong>Example ${i + 1}:</strong><br>
                                     <strong>Input:</strong> <code>${escapeHtml(tc.input)}</code><br>
                                     <strong>Output:</strong> <code>${escapeHtml(tc.output)}</code>
@@ -153,10 +153,10 @@
                     // Start auto-save
                     startAutoSave();
                 } else {
-                    document.getElementById('problem-loading').innerHTML = '<span style="color:#c62828;">Problem not found.</span>';
+                    document.getElementById('problem-loading').innerHTML = '<span class="status-failed">Problem not found.</span>';
                 }
             } catch (err) {
-                document.getElementById('problem-loading').innerHTML = '<span style="color:#c62828;">Error loading problem. Check if Problem-Service is running.</span>';
+                document.getElementById('problem-loading').innerHTML = '<span class="status-failed">Error loading problem. Check if Problem-Service is running.</span>';
             }
         }
 
@@ -238,7 +238,7 @@
             submitBtn.disabled = true;
             submitBtn.innerHTML = '<span class="spinner"></span> Submitting...';
             statusSpan.textContent = 'PENDING...';
-            statusSpan.className = 'status-pending';
+            statusSpan.className = 'submit-status status-pending';
 
             // Clear previous results
             document.getElementById('result-panel').classList.add('hidden');
@@ -254,19 +254,19 @@
                 if (data.success && data.data && data.data.submission) {
                     currentSubmissionId = data.data.submission._id;
                     statusSpan.textContent = 'Submitted! Waiting for results...';
-                    statusSpan.className = 'status-processing';
+                    statusSpan.className = 'submit-status status-processing';
 
                     // Poll for submission results
                     pollSubmission(currentSubmissionId);
                 } else {
                     showToast(data.message || 'Submission failed.', 'error');
                     statusSpan.textContent = 'Failed to submit.';
-                    statusSpan.className = 'status-failed';
+                    statusSpan.className = 'submit-status status-failed';
                 }
             } catch (err) {
                 showToast('Network error. Check if Submission-Service is running.', 'error');
                 statusSpan.textContent = 'Error.';
-                statusSpan.className = 'status-error';
+                statusSpan.className = 'submit-status status-error';
             }
 
             submitBtn.disabled = false;
@@ -295,7 +295,7 @@
                 if (attempts > maxAttempts) {
                     const statusEl = document.getElementById('submit-status');
                     statusEl.textContent = 'Still processing. Please check submissions history.';
-                    statusEl.className = 'status-processing';
+                    statusEl.className = 'submit-status status-processing';
                     clearSubmissionPolling();
                     return;
                 }
@@ -355,18 +355,16 @@
                 : 'status-failed';
 
             statusSpan.textContent = status;
-            statusSpan.className = statusClass;
+            statusSpan.className = 'submit-status ' + statusClass;
 
             const passed = result.passedTestCases || 0;
             const total = result.totalTestCases || 0;
             const execTime = result.executionTime ? result.executionTime + 'ms' : '-';
 
             summary.innerHTML = `
-                <span class="${statusClass}" style="font-size: 18px; font-weight: bold;">${status}</span>
-                &nbsp;&nbsp;
-                <span style="font-size: 14px;">Passed ${passed}/${total} test cases</span>
-                &nbsp;&nbsp;
-                <span style="font-size: 13px; color: #888;">Execution: ${execTime}</span>
+                <span class="summary-status ${statusClass}">${status}</span>
+                <span class="summary-pass">Passed ${passed}/${total} test cases</span>
+                <span class="summary-exec">Execution: ${execTime}</span>
             `;
 
             // Test case details
@@ -385,7 +383,7 @@
                         </tr>
                     `;
                     if (tr.error) {
-                        html += `<tr><td colspan="5" style="color: #c62828; font-size: 12px; padding-left: 20px;">Error: ${escapeHtml(tr.error)}</td></tr>`;
+                        html += `<tr class="result-error-row"><td colspan="5">Error: ${escapeHtml(tr.error)}</td></tr>`;
                     }
                 });
                 html += '</tbody></table>';
