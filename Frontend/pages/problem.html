@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Problem - CodeJudge</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <a href="/" class="logo">CodeJudge</a>
+        <div class="nav-links" id="nav-links"></div>
+    </nav>
+
+    <div class="container-wide">
+        <div class="split-layout">
+            <!-- Left: Problem description -->
+            <div class="split-left" id="problem-panel">
+                <div class="card">
+                    <div id="problem-loading" class="text-center" style="padding: 30px;">
+                        <span class="spinner"></span> Loading problem...
+                    </div>
+                    <div id="problem-content" class="hidden">
+                        <h1 id="problem-title" style="font-size: 22px; margin-bottom: 5px;"></h1>
+                        <span id="problem-difficulty" class="badge"></span>
+
+                        <hr style="margin: 15px 0; border: none; border-top: 1px solid #eee;">
+
+                        <div id="problem-description" style="white-space: pre-wrap; font-size: 14px; line-height: 1.7;"></div>
+
+                        <hr style="margin: 15px 0; border: none; border-top: 1px solid #eee;">
+
+                        <h3 style="margin-bottom: 10px;">Test Cases</h3>
+                        <div id="test-cases"></div>
+
+                        <div id="editorial-section" class="hidden" style="margin-top: 15px;">
+                            <hr style="margin: 15px 0; border: none; border-top: 1px solid #eee;">
+                            <h3 style="margin-bottom: 10px;">Editorial</h3>
+                            <div id="editorial-content" style="white-space: pre-wrap; font-size: 14px;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: Code editor -->
+            <div class="split-right">
+                <div class="editor-header">
+                    <select id="language-select">
+                        <option value="cpp">C++</option>
+                        <option value="java">Java</option>
+                        <option value="python">Python</option>
+                    </select>
+                    <div>
+                        <button class="btn btn-sm" onclick="resetCode()">Reset Code</button>
+                    </div>
+                </div>
+
+                <textarea id="code-editor" class="code-textarea" spellcheck="false"
+                    placeholder="Select a language and start coding..."></textarea>
+
+                <div class="editor-actions">
+                    <button class="btn btn-primary" id="submit-btn" onclick="submitCode()">Submit</button>
+                    <span id="submit-status" style="font-size: 13px; color: #888; line-height: 32px;"></span>
+                </div>
+
+                <!-- Results panel -->
+                <div id="result-panel" class="result-panel hidden">
+                    <h3>Submission Result</h3>
+                    <div id="result-summary" style="margin: 10px 0;"></div>
+                    <div id="result-details"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Socket.IO client -->
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <script src="/js/config.js"></script>
+    <script src="/js/auth.js"></script>
+    <script src="/js/api.js"></script>
+    <script src="/js/realtime.js"></script>
+    <script src="/js/ui.js"></script>
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const problemId = urlParams.get('id');
+
+        let problem = null;
+        let codeStubs = {};
+        let currentSubmissionId = null;
+        let pollTimer = null;
+        let activePollingSubmissionId = null;
+        let isSubmissionResolved = false;
+        let unsubscribeRealtime = null;
+
+        // Auto-save interval
+        let autoSaveInterval = null;
+
+        if (!problemId) {
+            document.getElementById('problem-loading').innerHTML = '<span style="color:#c62828;">No problem ID provided.</span>';
+        }
+
+        // --- Load problem ---
+        async function loadProblem() {
+            try {
+                const data = await API.get(CONFIG.PROBLEM_SERVICE_URL + '/problems/' + problemId);
+
+                if (data.success && data.data) {
+                    problem = data.data;
+                    document.title = problem.title + ' - CodeJudge';
+
+                    document.getElementById('problem-title').textContent = problem.title;
+
+                    const badge = document.getElementById('problem-difficulty');
+                    badge.textContent = problem.difficulty;
+                    badge.className = 'badge badge-' + problem.difficulty;
+
+                    document.getElementById('problem-description').textContent = problem.description;
+
+                    // Test cases
+                    const testCasesDiv = document.getElementById('test-cases');
+                    testCasesDiv.innerHTML = '';
+                    if (problem.testCases && problem.testCases.length > 0) {
+                        problem.testCases.forEach((tc, i) => {
+                            testCasesDiv.innerHTML += `
+                                <div style="background: #fafafa; border: 1px solid #eee; padding: 10px; border-radius: 3px; margin-bottom: 8px; font-size: 13px;">
+                                    <strong>Example ${i + 1}:</strong><br>
+                                    <strong>Input:</strong> <code>${escapeHtml(tc.input)}</code><br>
+                                    <strong>Output:</strong> <code>${escapeHtml(tc.output)}</code>
+                                </div>
+                            `;
+                        });
+                    }
+
+                    // Editorial
+                    if (problem.editorial) {
+                        document.getElementById('editorial-content').textContent = problem.editorial;
+                        document.getElementById('editorial-section').classList.remove('hidden');
+                    }
+
+                    // Code stubs
+                    if (problem.codeStubs && problem.codeStubs.length > 0) {
+                        problem.codeStubs.forEach(stub => {
+                            codeStubs[stub.language] = {
+                                start: stub.startSnippet || '',
+                                user: stub.userSnippet || '',
+                                end: stub.endSnippet || ''
+                            };
+                        });
+                    }
+
+                    // Load saved code or default stub
+                    loadCodeForLanguage(document.getElementById('language-select').value);
+
+                    document.getElementById('problem-loading').classList.add('hidden');
+                    document.getElementById('problem-content').classList.remove('hidden');
+
+                    // Start auto-save
+                    startAutoSave();
+                } else {
+                    document.getElementById('problem-loading').innerHTML = '<span style="color:#c62828;">Problem not found.</span>';
+                }
+            } catch (err) {
+                document.getElementById('problem-loading').innerHTML = '<span style="color:#c62828;">Error loading problem. Check if Problem-Service is running.</span>';
+            }
+        }
+
+        // --- Language & code management ---
+        function getStubCode(lang) {
+            if (codeStubs[lang]) {
+                const s = codeStubs[lang];
+                return s.start + '\n' + s.user + '\n' + s.end;
+            }
+            return '// Write your ' + lang + ' code here\n';
+        }
+
+        function loadCodeForLanguage(lang) {
+            // Check localStorage for saved code first
+            const saved = localStorage.getItem('code_' + problemId + '_' + lang);
+            const editor = document.getElementById('code-editor');
+            editor.value = saved || getStubCode(lang);
+        }
+
+        function resetCode() {
+            const lang = document.getElementById('language-select').value;
+            document.getElementById('code-editor').value = getStubCode(lang);
+            localStorage.removeItem('code_' + problemId + '_' + lang);
+            showToast('Code reset to default', 'success');
+        }
+
+        document.getElementById('language-select').addEventListener('change', (e) => {
+            // Save current code before switching
+            saveCurrentCode();
+            loadCodeForLanguage(e.target.value);
+        });
+
+        function saveCurrentCode() {
+            const lang = document.getElementById('language-select').value;
+            const code = document.getElementById('code-editor').value;
+            localStorage.setItem('code_' + problemId + '_' + lang, code);
+        }
+
+        function startAutoSave() {
+            if (autoSaveInterval) clearInterval(autoSaveInterval);
+            autoSaveInterval = setInterval(saveCurrentCode, 30000); // every 30s
+        }
+
+        // --- Tab key support in textarea ---
+        document.getElementById('code-editor').addEventListener('keydown', (e) => {
+            if (e.key === 'Tab') {
+                e.preventDefault();
+                const ta = e.target;
+                const start = ta.selectionStart;
+                const end = ta.selectionEnd;
+                ta.value = ta.value.substring(0, start) + '    ' + ta.value.substring(end);
+                ta.selectionStart = ta.selectionEnd = start + 4;
+            }
+        });
+
+        // --- Submit code ---
+        async function submitCode() {
+            if (!Auth.isLoggedIn()) {
+                showToast('Please login to submit code.', 'error');
+                window.location.href = '/pages/login.html';
+                return;
+            }
+
+            const user = Auth.getUser();
+            const code = document.getElementById('code-editor').value.trim();
+            const language = document.getElementById('language-select').value;
+            const submitBtn = document.getElementById('submit-btn');
+            const statusSpan = document.getElementById('submit-status');
+
+            if (!code) {
+                showToast('Please write some code first.', 'error');
+                return;
+            }
+
+            saveCurrentCode();
+            isSubmissionResolved = false;
+            clearSubmissionPolling();
+
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="spinner"></span> Submitting...';
+            statusSpan.textContent = 'PENDING...';
+            statusSpan.className = 'status-pending';
+
+            // Clear previous results
+            document.getElementById('result-panel').classList.add('hidden');
+
+            try {
+                const data = await API.post(CONFIG.SUBMISSION_SERVICE_URL + '/submissions', {
+                    userId: user._id,
+                    problemId: problemId,
+                    code: code,
+                    language: language
+                });
+
+                if (data.success && data.data && data.data.submission) {
+                    currentSubmissionId = data.data.submission._id;
+                    statusSpan.textContent = 'Submitted! Waiting for results...';
+                    statusSpan.className = 'status-processing';
+
+                    // Connect realtime channel once and use submission-id filtering.
+                    ensureRealtime(user._id);
+
+                    // Also poll as a fallback
+                    pollSubmission(currentSubmissionId);
+                } else {
+                    showToast(data.message || 'Submission failed.', 'error');
+                    statusSpan.textContent = 'Failed to submit.';
+                    statusSpan.className = 'status-failed';
+                }
+            } catch (err) {
+                showToast('Network error. Check if Submission-Service is running.', 'error');
+                statusSpan.textContent = 'Error.';
+                statusSpan.className = 'status-error';
+            }
+
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Submit';
+        }
+
+        function ensureRealtime(userId) {
+            if (unsubscribeRealtime) {
+                Realtime.connect(userId);
+                return;
+            }
+
+            unsubscribeRealtime = Realtime.subscribe((event, payload) => {
+                if (event !== 'submission') return;
+
+                const incomingId = payload && (payload.submissionId || payload._id);
+                if (incomingId && currentSubmissionId && incomingId !== currentSubmissionId) {
+                    return;
+                }
+
+                displayResults(payload);
+            });
+
+            Realtime.connect(userId);
+        }
+
+        // --- Polling fallback ---
+        async function pollSubmission(submissionId) {
+            clearSubmissionPolling();
+
+            activePollingSubmissionId = submissionId;
+            let attempts = 0;
+            const fastPollAttempts = 30; // First minute: 30 * 2s
+            const slowPollIntervalMs = 5000;
+            const maxAttempts = 180; // Stop polling after ~12 minutes.
+
+            const poll = async () => {
+                if (isSubmissionResolved || activePollingSubmissionId !== submissionId) {
+                    return;
+                }
+
+                attempts++;
+
+                if (attempts > maxAttempts) {
+                    const statusEl = document.getElementById('submit-status');
+                    statusEl.textContent = 'Still processing. Please check submissions history.';
+                    statusEl.className = 'status-processing';
+                    clearSubmissionPolling();
+                    return;
+                }
+
+                try {
+                    const data = await API.get(CONFIG.SUBMISSION_SERVICE_URL + '/submissions/' + submissionId);
+                    if (data.success && data.data) {
+                        const sub = data.data;
+                        if (sub.status === 'COMPLETED' || sub.status === 'ERROR') {
+                            displayResults(sub);
+                            return;
+                        }
+                        // Update status text
+                        const statusEl = document.getElementById('submit-status');
+                        if (attempts > fastPollAttempts) {
+                            statusEl.textContent = sub.status + '... still processing, this can take longer for first C++ run';
+                        } else {
+                            statusEl.textContent = sub.status + '...';
+                        }
+                    }
+                } catch (err) {
+                    // ignore poll errors
+                }
+
+                const nextInterval = attempts > fastPollAttempts ? slowPollIntervalMs : 2000;
+                pollTimer = setTimeout(poll, nextInterval);
+            };
+
+            pollTimer = setTimeout(poll, 3000); // start polling after 3 seconds
+        }
+
+        function clearSubmissionPolling() {
+            if (pollTimer) {
+                clearTimeout(pollTimer);
+                pollTimer = null;
+            }
+            activePollingSubmissionId = null;
+        }
+
+        // --- Display results ---
+        function displayResults(result) {
+            if (isSubmissionResolved) return;
+
+            isSubmissionResolved = true;
+            clearSubmissionPolling();
+
+            const panel = document.getElementById('result-panel');
+            const summary = document.getElementById('result-summary');
+            const details = document.getElementById('result-details');
+            const statusSpan = document.getElementById('submit-status');
+
+            panel.classList.remove('hidden');
+
+            const status = result.overallStatus || result.status || 'UNKNOWN';
+            const statusClass = status === 'SUCCESS' ? 'status-success'
+                : status === 'PARTIAL' ? 'status-partial'
+                : 'status-failed';
+
+            statusSpan.textContent = status;
+            statusSpan.className = statusClass;
+
+            const passed = result.passedTestCases || 0;
+            const total = result.totalTestCases || 0;
+            const execTime = result.executionTime ? result.executionTime + 'ms' : '-';
+
+            summary.innerHTML = `
+                <span class="${statusClass}" style="font-size: 18px; font-weight: bold;">${status}</span>
+                &nbsp;&nbsp;
+                <span style="font-size: 14px;">Passed ${passed}/${total} test cases</span>
+                &nbsp;&nbsp;
+                <span style="font-size: 13px; color: #888;">Execution: ${execTime}</span>
+            `;
+
+            // Test case details
+            details.innerHTML = '';
+            if (result.testResults && result.testResults.length > 0) {
+                let html = '<table><thead><tr><th>#</th><th>Input</th><th>Expected</th><th>Actual</th><th>Status</th></tr></thead><tbody>';
+                result.testResults.forEach((tr, i) => {
+                    const pass = tr.status === 'PASS';
+                    html += `
+                        <tr>
+                            <td>${i + 1}</td>
+                            <td><code>${escapeHtml(tr.input || '')}</code></td>
+                            <td><code>${escapeHtml(tr.expectedOutput || '')}</code></td>
+                            <td><code>${escapeHtml(tr.actualOutput || '')}</code></td>
+                            <td>${pass ? '✓' : '✗'} <span class="${pass ? 'status-success' : 'status-failed'}">${tr.status}</span></td>
+                        </tr>
+                    `;
+                    if (tr.error) {
+                        html += `<tr><td colspan="5" style="color: #c62828; font-size: 12px; padding-left: 20px;">Error: ${escapeHtml(tr.error)}</td></tr>`;
+                    }
+                });
+                html += '</tbody></table>';
+                details.innerHTML = html;
+            }
+
+            if (result.executionError) {
+                details.innerHTML += `<div class="msg msg-error mt-10">${escapeHtml(result.executionError)}</div>`;
+            }
+
+            showToast('Results received: ' + status, status === 'SUCCESS' ? 'success' : 'error');
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // --- Init ---
+        if (problemId) {
+            loadProblem();
+        }
+
+        // Connect socket on load if logged in
+        if (Auth.isLoggedIn()) {
+            const user = Auth.getUser();
+            if (user && user._id) ensureRealtime(user._id);
+        }
+
+        // Save on page leave
+        window.addEventListener('beforeunload', () => {
+            saveCurrentCode();
+            clearSubmissionPolling();
+            if (unsubscribeRealtime) {
+                unsubscribeRealtime();
+                unsubscribeRealtime = null;
+            }
+            Realtime.disconnect();
+        });
+    </script>
+</body>
+</html>

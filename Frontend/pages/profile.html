@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile - CodeJudge</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <a href="/" class="logo">CodeJudge</a>
+        <div class="nav-links" id="nav-links"></div>
+    </nav>
+
+    <div class="container" style="max-width: 600px;">
+        <h1 style="margin-bottom: 15px;">Profile</h1>
+
+        <!-- Profile View -->
+        <div class="card" id="profile-card">
+            <div id="profile-loading" class="text-center" style="padding: 20px;">
+                <span class="spinner"></span> Loading...
+            </div>
+            <div id="profile-view" class="hidden">
+                <table style="width: 100%;">
+                    <tr><td style="font-weight: 600; width: 130px;">Username</td><td id="p-username"></td></tr>
+                    <tr><td style="font-weight: 600;">Email</td><td id="p-email"></td></tr>
+                    <tr><td style="font-weight: 600;">First Name</td><td id="p-firstName"></td></tr>
+                    <tr><td style="font-weight: 600;">Last Name</td><td id="p-lastName"></td></tr>
+                    <tr><td style="font-weight: 600;">Role</td><td id="p-role"></td></tr>
+                    <tr><td style="font-weight: 600;">Joined</td><td id="p-joined"></td></tr>
+                </table>
+                <div style="margin-top: 15px; display: flex; gap: 10px;">
+                    <button class="btn" onclick="showEditForm()">Edit Profile</button>
+                    <button class="btn" onclick="showPasswordForm()">Change Password</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Edit Profile Form -->
+        <div class="card hidden" id="edit-card">
+            <h2>Edit Profile</h2>
+            <div id="edit-msg" class="msg hidden"></div>
+            <form id="edit-form">
+                <div class="form-group">
+                    <label for="edit-firstName">First Name</label>
+                    <input type="text" id="edit-firstName" maxlength="50">
+                </div>
+                <div class="form-group">
+                    <label for="edit-lastName">Last Name</label>
+                    <input type="text" id="edit-lastName" maxlength="50">
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <button type="submit" class="btn btn-primary" id="edit-submit">Save</button>
+                    <button type="button" class="btn" onclick="hideEditForm()">Cancel</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Change Password Form -->
+        <div class="card hidden" id="password-card">
+            <h2>Change Password</h2>
+            <div id="password-msg" class="msg hidden"></div>
+            <form id="password-form">
+                <div class="form-group">
+                    <label for="old-password">Current Password</label>
+                    <input type="password" id="old-password" required minlength="8">
+                </div>
+                <div class="form-group">
+                    <label for="new-password">New Password</label>
+                    <input type="password" id="new-password" required minlength="8" placeholder="Min 8 characters">
+                </div>
+                <div class="form-group">
+                    <label for="confirm-password">Confirm New Password</label>
+                    <input type="password" id="confirm-password" required minlength="8">
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <button type="submit" class="btn btn-primary" id="pw-submit">Change Password</button>
+                    <button type="button" class="btn" onclick="hidePasswordForm()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="/js/config.js"></script>
+    <script src="/js/auth.js"></script>
+    <script src="/js/api.js"></script>
+    <script src="/js/ui.js"></script>
+    <script>
+        if (!Auth.requireAuth()) {
+            // Will redirect to login
+        }
+
+        // Load profile
+        async function loadProfile() {
+            try {
+                const data = await API.get(CONFIG.USER_SERVICE_URL + '/users/profile');
+
+                if (data.success && data.data) {
+                    const u = data.data;
+                    document.getElementById('p-username').textContent = u.username || '-';
+                    document.getElementById('p-email').textContent = u.email || '-';
+                    document.getElementById('p-firstName').textContent = u.firstName || '-';
+                    document.getElementById('p-lastName').textContent = u.lastName || '-';
+                    document.getElementById('p-role').textContent = u.role || 'user';
+                    document.getElementById('p-joined').textContent = u.createdAt ? new Date(u.createdAt).toLocaleDateString() : '-';
+
+                    // Pre-fill edit form
+                    document.getElementById('edit-firstName').value = u.firstName || '';
+                    document.getElementById('edit-lastName').value = u.lastName || '';
+
+                    // Update stored user
+                    Auth.setUser(u);
+
+                    document.getElementById('profile-loading').classList.add('hidden');
+                    document.getElementById('profile-view').classList.remove('hidden');
+                } else {
+                    document.getElementById('profile-loading').innerHTML = 'Failed to load profile.';
+                }
+            } catch (err) {
+                document.getElementById('profile-loading').innerHTML = 'Error loading profile.';
+            }
+        }
+
+        function showEditForm() {
+            document.getElementById('edit-card').classList.remove('hidden');
+            document.getElementById('password-card').classList.add('hidden');
+        }
+
+        function hideEditForm() {
+            document.getElementById('edit-card').classList.add('hidden');
+        }
+
+        function showPasswordForm() {
+            document.getElementById('password-card').classList.remove('hidden');
+            document.getElementById('edit-card').classList.add('hidden');
+        }
+
+        function hidePasswordForm() {
+            document.getElementById('password-card').classList.add('hidden');
+        }
+
+        // Edit profile
+        document.getElementById('edit-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const msg = document.getElementById('edit-msg');
+            msg.classList.add('hidden');
+
+            const body = {};
+            const fn = document.getElementById('edit-firstName').value.trim();
+            const ln = document.getElementById('edit-lastName').value.trim();
+            if (fn) body.firstName = fn;
+            if (ln) body.lastName = ln;
+
+            const btn = document.getElementById('edit-submit');
+            btn.disabled = true;
+            btn.textContent = 'Saving...';
+
+            try {
+                const data = await API.put(CONFIG.USER_SERVICE_URL + '/users/profile', body);
+
+                if (data.success) {
+                    msg.className = 'msg msg-success';
+                    msg.textContent = 'Profile updated successfully!';
+                    msg.classList.remove('hidden');
+                    loadProfile();
+                    showToast('Profile updated!', 'success');
+                } else {
+                    msg.className = 'msg msg-error';
+                    msg.textContent = data.message || 'Update failed.';
+                    msg.classList.remove('hidden');
+                }
+            } catch (err) {
+                msg.className = 'msg msg-error';
+                msg.textContent = 'Network error.';
+                msg.classList.remove('hidden');
+            }
+
+            btn.disabled = false;
+            btn.textContent = 'Save';
+        });
+
+        // Change password
+        document.getElementById('password-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const msg = document.getElementById('password-msg');
+            msg.classList.add('hidden');
+
+            const oldPassword = document.getElementById('old-password').value;
+            const newPassword = document.getElementById('new-password').value;
+            const confirmPassword = document.getElementById('confirm-password').value;
+
+            if (newPassword !== confirmPassword) {
+                msg.className = 'msg msg-error';
+                msg.textContent = 'New passwords do not match.';
+                msg.classList.remove('hidden');
+                return;
+            }
+
+            if (newPassword.length < 8) {
+                msg.className = 'msg msg-error';
+                msg.textContent = 'Password must be at least 8 characters.';
+                msg.classList.remove('hidden');
+                return;
+            }
+
+            const btn = document.getElementById('pw-submit');
+            btn.disabled = true;
+            btn.textContent = 'Changing...';
+
+            try {
+                const data = await API.put(CONFIG.USER_SERVICE_URL + '/users/password', {
+                    oldPassword,
+                    newPassword
+                });
+
+                if (data.success) {
+                    msg.className = 'msg msg-success';
+                    msg.textContent = 'Password changed successfully!';
+                    msg.classList.remove('hidden');
+                    document.getElementById('password-form').reset();
+                    showToast('Password changed!', 'success');
+                } else {
+                    msg.className = 'msg msg-error';
+                    msg.textContent = data.message || 'Password change failed.';
+                    msg.classList.remove('hidden');
+                }
+            } catch (err) {
+                msg.className = 'msg msg-error';
+                msg.textContent = 'Network error.';
+                msg.classList.remove('hidden');
+            }
+
+            btn.disabled = false;
+            btn.textContent = 'Change Password';
+        });
+
+        loadProfile();
+    </script>
+</body>
+</html>

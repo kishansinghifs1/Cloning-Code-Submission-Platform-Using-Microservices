@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Problems - CodeJudge</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <a href="/" class="logo">CodeJudge</a>
+        <div class="nav-links" id="nav-links"></div>
+    </nav>
+
+    <div class="container">
+        <h1 style="margin-bottom: 15px;">Problems</h1>
+
+        <!-- Filters -->
+        <div class="filter-bar">
+            <input type="text" id="search-input" placeholder="Search problems..." style="flex: 1; min-width: 200px;">
+            <select id="difficulty-filter">
+                <option value="">All Difficulties</option>
+                <option value="easy">Easy</option>
+                <option value="medium">Medium</option>
+                <option value="hard">Hard</option>
+            </select>
+            <button class="btn" onclick="loadProblems()">Search</button>
+        </div>
+
+        <!-- Problems table -->
+        <div class="card" style="padding: 0; overflow: hidden;">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 50px;">#</th>
+                        <th>Title</th>
+                        <th style="width: 100px;">Difficulty</th>
+                    </tr>
+                </thead>
+                <tbody id="problems-body">
+                    <tr><td colspan="3" class="text-center" style="padding: 30px;">Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        <div class="pagination" id="pagination"></div>
+    </div>
+
+    <script src="/js/config.js"></script>
+    <script src="/js/auth.js"></script>
+    <script src="/js/api.js"></script>
+    <script src="/js/ui.js"></script>
+    <script>
+        let currentPage = 1;
+        const limit = 15;
+
+        async function loadProblems() {
+            const tbody = document.getElementById('problems-body');
+            tbody.innerHTML = '<tr><td colspan="3" class="text-center" style="padding: 30px;"><span class="spinner"></span> Loading...</td></tr>';
+
+            const search = document.getElementById('search-input').value.trim();
+            const difficulty = document.getElementById('difficulty-filter').value;
+
+            let url = CONFIG.PROBLEM_SERVICE_URL + '/problems?page=' + currentPage + '&limit=' + limit;
+            if (search) url += '&search=' + encodeURIComponent(search);
+            if (difficulty) url += '&difficulty=' + difficulty;
+
+            try {
+                const data = await API.get(url);
+
+                if (data.success && data.data && data.data.length > 0) {
+                    tbody.innerHTML = '';
+                    data.data.forEach((problem, index) => {
+                        const row = document.createElement('tr');
+                        row.style.cursor = 'pointer';
+                        row.onclick = () => {
+                            window.location.href = '/pages/problem?id=' + problem._id;
+                        };
+                        row.innerHTML = `
+                            <td>${(currentPage - 1) * limit + index + 1}</td>
+                            <td><strong>${escapeHtml(problem.title)}</strong></td>
+                            <td><span class="badge badge-${problem.difficulty}">${problem.difficulty}</span></td>
+                        `;
+                        tbody.appendChild(row);
+                    });
+
+                    // Simple pagination - show next/prev
+                    const pagination = document.getElementById('pagination');
+                    pagination.innerHTML = '';
+                    if (currentPage > 1) {
+                        const prevBtn = document.createElement('button');
+                        prevBtn.textContent = '← Prev';
+                        prevBtn.onclick = () => { currentPage--; loadProblems(); };
+                        pagination.appendChild(prevBtn);
+                    }
+                    if (data.data.length === limit) {
+                        const nextBtn = document.createElement('button');
+                        nextBtn.textContent = 'Next →';
+                        nextBtn.onclick = () => { currentPage++; loadProblems(); };
+                        pagination.appendChild(nextBtn);
+                    }
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="3" class="text-center" style="padding: 30px; color: #888;">No problems found.</td></tr>';
+                    document.getElementById('pagination').innerHTML = '';
+                }
+            } catch (err) {
+                tbody.innerHTML = '<tr><td colspan="3" class="text-center" style="padding: 30px; color: #c62828;">Error loading problems. Check if Problem-Service is running.</td></tr>';
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Also search on Enter key
+        document.getElementById('search-input').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                currentPage = 1;
+                loadProblems();
+            }
+        });
+
+        document.getElementById('difficulty-filter').addEventListener('change', () => {
+            currentPage = 1;
+            loadProblems();
+        });
+
+        loadProblems();
+    </script>
+</body>
+</html>

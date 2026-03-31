@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CodeJudge - LeetCode Clone</title>
+    <meta name="description" content="Practice coding problems and improve your skills">
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <a href="/" class="logo">CodeJudge</a>
+        <div class="nav-links" id="nav-links"></div>
+    </nav>
+
+    <div class="container" style="text-align: center; margin-top: 80px;">
+        <h1>Welcome to CodeJudge</h1>
+        <p style="margin: 15px 0; color: #666;">Practice coding problems. Submit solutions. Get instant feedback.</p>
+        <div style="margin-top: 30px; display: flex; gap: 10px; justify-content: center;">
+            <a href="/pages/problems.html" class="btn btn-primary">Browse Problems</a>
+            <a href="/pages/login.html" class="btn" id="login-btn">Login</a>
+        </div>
+    </div>
+
+    <script src="/js/config.js"></script>
+    <script src="/js/auth.js"></script>
+    <script src="/js/api.js"></script>
+    <script src="/js/ui.js"></script>
+    <script>
+        if (Auth.isLoggedIn()) {
+            document.getElementById('login-btn').style.display = 'none';
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register - CodeJudge</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <a href="/" class="logo">CodeJudge</a>
+        <div class="nav-links" id="nav-links"></div>
+    </nav>
+
+    <div class="auth-container">
+        <div class="card">
+            <h2>Register</h2>
+            <div id="error-msg" class="msg msg-error hidden"></div>
+            <div id="success-msg" class="msg msg-success hidden"></div>
+
+            <form id="register-form">
+                <div class="form-group">
+                    <label for="username">Username *</label>
+                    <input type="text" id="username" name="username" required
+                        placeholder="3-30 chars, letters/numbers/underscore"
+                        minlength="3" maxlength="30" pattern="[a-zA-Z0-9_]+">
+                </div>
+                <div class="form-group">
+                    <label for="email">Email *</label>
+                    <input type="email" id="email" name="email" required placeholder="you@example.com">
+                </div>
+                <div class="form-group">
+                    <label for="password">Password *</label>
+                    <input type="password" id="password" name="password" required
+                        placeholder="Min 8 characters" minlength="8">
+                </div>
+                <div class="form-group">
+                    <label for="firstName">First Name</label>
+                    <input type="text" id="firstName" name="firstName" placeholder="Optional" maxlength="50">
+                </div>
+                <div class="form-group">
+                    <label for="lastName">Last Name</label>
+                    <input type="text" id="lastName" name="lastName" placeholder="Optional" maxlength="50">
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%;" id="submit-btn">
+                    Register
+                </button>
+            </form>
+
+            <div class="auth-footer">
+                Already have an account? <a href="/pages/login.html">Login</a>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/config.js"></script>
+    <script src="/js/auth.js"></script>
+    <script src="/js/api.js"></script>
+    <script src="/js/ui.js"></script>
+    <script>
+        if (Auth.isLoggedIn()) {
+            window.location.href = '/pages/problems.html';
+        }
+
+        document.getElementById('register-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const errorMsg = document.getElementById('error-msg');
+            const successMsg = document.getElementById('success-msg');
+            const submitBtn = document.getElementById('submit-btn');
+            errorMsg.classList.add('hidden');
+            successMsg.classList.add('hidden');
+
+            const body = {
+                username: document.getElementById('username').value.trim(),
+                email: document.getElementById('email').value.trim(),
+                password: document.getElementById('password').value
+            };
+
+            const firstName = document.getElementById('firstName').value.trim();
+            const lastName = document.getElementById('lastName').value.trim();
+            if (firstName) body.firstName = firstName;
+            if (lastName) body.lastName = lastName;
+
+            if (!body.username || !body.email || !body.password) {
+                errorMsg.textContent = 'Please fill in all required fields.';
+                errorMsg.classList.remove('hidden');
+                return;
+            }
+
+            if (body.password.length < 8) {
+                errorMsg.textContent = 'Password must be at least 8 characters.';
+                errorMsg.classList.remove('hidden');
+                return;
+            }
+
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="spinner"></span> Registering...';
+
+            try {
+                const data = await API.post(CONFIG.USER_SERVICE_URL + '/users/register', body);
+
+                if (data.success) {
+                    successMsg.textContent = 'Registration successful! Redirecting to login...';
+                    successMsg.classList.remove('hidden');
+                    setTimeout(() => {
+                        window.location.href = '/pages/login.html';
+                    }, 1500);
+                } else {
+                    errorMsg.textContent = data.message || 'Registration failed.';
+                    errorMsg.classList.remove('hidden');
+                }
+            } catch (err) {
+                errorMsg.textContent = err?.message || 'Network error. Please check if services are running.';
+                errorMsg.classList.remove('hidden');
+            }
+
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Register';
+        });
+    </script>
+</body>
+</html>

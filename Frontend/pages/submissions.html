@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Submissions - CodeJudge</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <a href="/" class="logo">CodeJudge</a>
+        <div class="nav-links" id="nav-links"></div>
+    </nav>
+
+    <div class="container">
+        <h1 style="margin-bottom: 15px;">My Submissions</h1>
+
+        <div id="not-logged-in" class="msg msg-info hidden">
+            Please <a href="/pages/login.html">login</a> to view your submissions.
+        </div>
+
+        <div id="submissions-content">
+            <!-- Stats -->
+            <div class="stats-row" id="stats-row">
+                <div class="stat-box">
+                    <div class="stat-value" id="stat-total">-</div>
+                    <div class="stat-label">Total Submissions</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value" id="stat-accepted">-</div>
+                    <div class="stat-label">Accepted</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value" id="stat-partial">-</div>
+                    <div class="stat-label">Partial</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value" id="stat-failed">-</div>
+                    <div class="stat-label">Failed</div>
+                </div>
+            </div>
+
+            <!-- Filters -->
+            <div class="filter-bar">
+                <select id="status-filter">
+                    <option value="">All Status</option>
+                    <option value="COMPLETED">Completed</option>
+                    <option value="PENDING">Pending</option>
+                    <option value="PROCESSING">Processing</option>
+                    <option value="ERROR">Error</option>
+                </select>
+                <button class="btn" onclick="loadSubmissions()">Filter</button>
+            </div>
+
+            <!-- Submissions table -->
+            <div class="card" style="padding: 0; overflow: hidden;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Problem Name</th>
+                            <th>Language</th>
+                            <th>Status</th>
+                            <th>Result</th>
+                            <th>Test Cases</th>
+                            <th>Submitted</th>
+                        </tr>
+                    </thead>
+                    <tbody id="submissions-body">
+                        <tr><td colspan="7" class="text-center" style="padding: 30px;">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="pagination" id="pagination"></div>
+        </div>
+    </div>
+
+    <script src="/js/config.js"></script>
+    <script src="/js/auth.js"></script>
+    <script src="/js/api.js"></script>
+    <script src="/js/ui.js"></script>
+    <script>
+        let currentPage = 1;
+        const limit = 20;
+
+        if (!Auth.isLoggedIn()) {
+            document.getElementById('not-logged-in').classList.remove('hidden');
+            document.getElementById('submissions-content').classList.add('hidden');
+        } else {
+            loadSubmissions();
+        }
+
+        async function loadSubmissions() {
+            const user = Auth.getUser();
+            if (!user) return;
+
+            const tbody = document.getElementById('submissions-body');
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center" style="padding: 30px;"><span class="spinner"></span> Loading...</td></tr>';
+
+            const status = document.getElementById('status-filter').value;
+            const offset = (currentPage - 1) * limit;
+            let url = CONFIG.SUBMISSION_SERVICE_URL + '/submissions?userId=' + user._id + '&offset=' + offset + '&limit=' + limit;
+            if (status) url += '&status=' + status;
+
+            try {
+                const data = await API.get(url);
+
+                if (data.success && data.data && data.data.length > 0) {
+                    const subs = data.data;
+
+                    // Calculate stats
+                    let totalCount = subs.length;
+                    let accepted = 0, partial = 0, failed = 0;
+                    subs.forEach(s => {
+                        if (s.overallStatus === 'SUCCESS') accepted++;
+                        else if (s.overallStatus === 'PARTIAL') partial++;
+                        else if (s.overallStatus === 'FAILED') failed++;
+                    });
+                    document.getElementById('stat-total').textContent = totalCount;
+                    document.getElementById('stat-accepted').textContent = accepted;
+                    document.getElementById('stat-partial').textContent = partial;
+                    document.getElementById('stat-failed').textContent = failed;
+
+                    tbody.innerHTML = '';
+                    
+                    // Fetch problem names for all submissions
+                    const problemNameMap = {};
+                    for (const sub of subs) {
+                        if (sub.problemId && !problemNameMap[sub.problemId]) {
+                            try {
+                                const problemData = await API.get(CONFIG.PROBLEM_SERVICE_URL + '/problems/' + sub.problemId);
+                                problemNameMap[sub.problemId] = problemData.data?.title || 'Unknown Problem';
+                            } catch (err) {
+                                problemNameMap[sub.problemId] = 'Unknown Problem';
+                            }
+                        }
+                    }
+                    
+                    subs.forEach((sub, i) => {
+                        const statusClass = sub.overallStatus
+                            ? 'status-' + sub.overallStatus.toLowerCase()
+                            : 'status-' + (sub.status || '').toLowerCase();
+
+                        const row = document.createElement('tr');
+                        row.style.cursor = 'pointer';
+                        row.onclick = () => viewSubmission(sub);
+                        const problemName = problemNameMap[sub.problemId] || 'Unknown Problem';
+                        row.innerHTML = `
+                            <td>${(currentPage - 1) * limit + i + 1}</td>
+                            <td style="font-size: 12px; color: #1976d2; text-decoration: none; cursor: pointer;" onclick="event.stopPropagation(); window.location.href='/pages/problem.html?id=${sub.problemId}'"><strong>${problemName}</strong></td>
+                            <td>${sub.language || '-'}</td>
+                            <td>${sub.status || '-'}</td>
+                            <td><span class="${statusClass}" style="font-weight: 600;">${sub.overallStatus || '-'}</span></td>
+                            <td>${sub.passedTestCases || 0}/${sub.totalTestCases || 0}</td>
+                            <td style="font-size: 12px;">${sub.submittedAt ? new Date(sub.submittedAt).toLocaleString() : '-'}</td>
+                        `;
+                        tbody.appendChild(row);
+                    });
+
+                    // Pagination
+                    const pagination = document.getElementById('pagination');
+                    pagination.innerHTML = '';
+                    if (currentPage > 1) {
+                        const prev = document.createElement('button');
+                        prev.textContent = '← Prev';
+                        prev.onclick = () => { currentPage--; loadSubmissions(); };
+                        pagination.appendChild(prev);
+                    }
+                    if (subs.length === limit) {
+                        const next = document.createElement('button');
+                        next.textContent = 'Next →';
+                        next.onclick = () => { currentPage++; loadSubmissions(); };
+                        pagination.appendChild(next);
+                    }
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="7" class="text-center" style="padding: 30px; color: #888;">No submissions found.</td></tr>';
+                    document.getElementById('pagination').innerHTML = '';
+
+                    document.getElementById('stat-total').textContent = '0';
+                    document.getElementById('stat-accepted').textContent = '0';
+                    document.getElementById('stat-partial').textContent = '0';
+                    document.getElementById('stat-failed').textContent = '0';
+                }
+            } catch (err) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center" style="padding: 30px; color: #c62828;">Error loading submissions.</td></tr>';
+            }
+        }
+
+        function viewSubmission(sub) {
+            // Show a simple modal / detail view
+            let html = `
+                <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); z-index: 100; display: flex; align-items: center; justify-content: center;"
+                    onclick="if(event.target===this) this.remove();">
+                    <div style="background: #fff; padding: 25px; border-radius: 4px; max-width: 700px; width: 90%; max-height: 80vh; overflow: auto;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                            <h2 style="font-size: 18px;">Submission Details</h2>
+                            <button class="btn btn-sm" onclick="this.closest('[style*=fixed]').remove()">✕ Close</button>
+                        </div>
+
+                        <div style="margin-bottom: 10px; font-size: 14px;">
+                            <strong>Status:</strong> <span class="status-${(sub.overallStatus || '').toLowerCase()}" style="font-weight: 600;">${sub.overallStatus || sub.status || '-'}</span>
+                            &nbsp;&nbsp;
+                            <strong>Language:</strong> ${sub.language || '-'}
+                            &nbsp;&nbsp;
+                            <strong>Test Cases:</strong> ${sub.passedTestCases || 0}/${sub.totalTestCases || 0}
+                            ${sub.executionTime ? '&nbsp;&nbsp;<strong>Time:</strong> ' + sub.executionTime + 'ms' : ''}
+                        </div>
+            `;
+
+            if (sub.testResults && sub.testResults.length > 0) {
+                html += '<table style="margin-top: 10px;"><thead><tr><th>#</th><th>Input</th><th>Expected</th><th>Actual</th><th>Status</th></tr></thead><tbody>';
+                sub.testResults.forEach((tr, i) => {
+                    const pass = tr.status === 'PASS';
+                    html += `
+                        <tr>
+                            <td>${i + 1}</td>
+                            <td><code style="font-size: 12px;">${escapeHtml(tr.input || '')}</code></td>
+                            <td><code style="font-size: 12px;">${escapeHtml(tr.expectedOutput || '')}</code></td>
+                            <td><code style="font-size: 12px;">${escapeHtml(tr.actualOutput || '')}</code></td>
+                            <td>${pass ? '✓' : '✗'}</td>
+                        </tr>
+                    `;
+                });
+                html += '</tbody></table>';
+            }
+
+            if (sub.code) {
+                html += `
+                    <h3 style="margin-top: 15px; font-size: 14px;">Code:</h3>
+                    <pre style="background: #fafafa; padding: 10px; border: 1px solid #eee; border-radius: 3px; font-size: 12px; max-height: 200px; overflow: auto;">${escapeHtml(sub.code)}</pre>
+                `;
+            }
+
+            html += '</div></div>';
+
+            const modalDiv = document.createElement('div');
+            modalDiv.innerHTML = html;
+            document.body.appendChild(modalDiv.firstElementChild);
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>
