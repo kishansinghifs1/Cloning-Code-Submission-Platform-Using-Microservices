@@ -1,7 +1,7 @@
 services:
   frontend:
     build: ./Frontend
-    image: ${DOCKERHUB_USERNAME:-local}/codejudge-frontend:latest
+    image: kishansingh1/codemafia:frontend
     container_name: frontend
     ports:
       - "5500:5500"
@@ -19,7 +19,7 @@ services:
 
   evaluator_service:
     build: ./Evaluator-Service
-    image: ${DOCKERHUB_USERNAME:-local}/codejudge-evaluator:latest
+    image: kishansingh1/codemafia:evaluator
     container_name: evaluator_service
     ports:
       - "14000:4000"
@@ -38,7 +38,7 @@ services:
 
   problem_service:
     build: ./Problem-Service
-    image: ${DOCKERHUB_USERNAME:-local}/codejudge-problem:latest
+    image: kishansingh1/codemafia:problem
     container_name: problem_service
     ports:
       - "13000:3000"
@@ -52,7 +52,7 @@ services:
 
   submission_service:
     build: ./Submission-Service
-    image: ${DOCKERHUB_USERNAME:-local}/codejudge-submission:latest
+    image: kishansingh1/codemafia:submission
     container_name: submission_service
     ports:
       - "15000:5000"
@@ -79,7 +79,7 @@ services:
 
   user_service:
     build: ./User-Service
-    image: ${DOCKERHUB_USERNAME:-local}/codejudge-user:latest
+    image: kishansingh1/codemafia:user
     container_name: user_service
     ports:
       - "16000:6000"
